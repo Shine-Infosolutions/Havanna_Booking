@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #ede8d0;
+  --color-secondary: #d4c990;
+  --color-dark: #2e3133;
+}
+
+@keyframes modalSpring {
+  0% {
+    transform: scale(0.9) translateY(20px);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.02) translateY(-2px);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-spring {
+  animation: modalSpring 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.main-gradient {
+  background: linear-gradient(135deg, white 0%, var(--color-primary) 100%);
+}
