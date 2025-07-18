@@ -8,29 +8,45 @@ import {
   Edit,
   Trash2,
   HelpCircle,
+  Loader,
 } from "lucide-react";
-import { STORAGE_KEYS, getStoredData, storeData } from "../utils/LocalStorage";
-import BookingForm from "../components/BookingForm";
 import BookingDetails from "../components/BookingDetails";
+import { useNavigate } from "react-router-dom";
+
+const BACKEND_URL =
+  import.meta.env.BACKEND_URL || "https://havana-backend.vercel.app";
 
 const Bookings = () => {
-  const [showForm, setShowForm] = useState(false);
   const [bookings, setBookings] = useState([]);
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [showHelp, setShowHelp] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Load bookings from localStorage
-    const storedBookings = getStoredData(STORAGE_KEYS.BOOKINGS) || [];
-    setBookings(storedBookings);
-  }, []);
+    const fetchBookings = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`${BACKEND_URL}/api/bookings`);
 
-  const handleAddBooking = (newBooking) => {
-    setBookings([newBooking, ...bookings]);
-    setShowForm(false);
-  };
+        if (!response.ok) {
+          throw new Error("Failed to fetch bookings");
+        }
+        const data = await response.json();
+        if (data.success) {
+          setBookings(data.bookings);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error("Error fetching bookings:", error);
+        setError("Failed to load bookings. Please try again later.");
+      }
+    };
+    fetchBookings();
+  }, []);
 
   const handleViewBooking = (booking) => {
     setSelectedBooking(booking);
@@ -46,13 +62,13 @@ const Bookings = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "confirmed":
+      case "Booked":
         return "bg-green-100 text-green-800";
-      case "checked-in":
+      case "Checked In":
         return "bg-blue-100 text-blue-800";
-      case "checked-out":
+      case "Checked Out":
         return "bg-gray-100 text-gray-800";
-      case "cancelled":
+      case "Cancelled":
         return "bg-red-100 text-red-800";
       default:
         return "bg-yellow-100 text-yellow-800";
@@ -61,29 +77,37 @@ const Bookings = () => {
 
   const filteredBookings = bookings
     .filter(
-      (booking) => statusFilter === "all" || booking.status === statusFilter
+      (booking) =>
+        statusFilter === "all" ||
+        booking.status === statusFilter ||
+        booking.status ===
+          statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)
     )
     .filter(
       (booking) =>
         searchTerm === "" ||
-        booking.guestName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        booking.roomNumber.toString().includes(searchTerm)
+        (booking.name || booking.guestName || "")
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        (booking.roomNo || booking.roomNumber || "")
+          .toString()
+          .includes(searchTerm)
     );
 
   return (
-    <div className="p-6 space-y-6 bg-gradient-to-b from-white to-primary/50 min-h-screen">
+    <div className="p-6 space-y-6  min-h-screen">
       <div className="flex items-center justify-between">
         <div className="flex items-center">
           <h2 className="text-2xl font-bold text-dark">Bookings</h2>
-          <button
+          {/* <button
             onClick={() => setShowHelp(!showHelp)}
             className="ml-2 text-dark/60 hover:text-dark"
           >
             <HelpCircle className="w-5 h-5" />
-          </button>
+          </button> */}
         </div>
         <button
-          onClick={() => setShowForm(true)}
+          onClick={() => navigate("/booking/new")}
           className="bg-secondary text-dark px-4 py-2 rounded-lg hover:shadow-lg transition-shadow font-medium"
         >
           <Plus className="w-4 h-4 inline mr-2" />
@@ -92,7 +116,7 @@ const Bookings = () => {
       </div>
 
       {/* Help Text */}
-      {showHelp && (
+      {/* {showHelp && (
         <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
           <h3 className="font-medium text-blue-800">
             How to use the Bookings page:
@@ -105,7 +129,9 @@ const Bookings = () => {
             <li>Use the action buttons to view, edit, or delete bookings</li>
           </ol>
         </div>
-      )}
+      )} */}
+
+      {error && <div className="text-red-500 text-sm">{error}</div>}
 
       {/* Search and Filter */}
       <div className="flex flex-col md:flex-row md:items-center gap-4">
@@ -169,12 +195,23 @@ const Bookings = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredBookings.length > 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan="7" className="px-6 py-12 text-center">
+                    <div className="flex justify-center items-center">
+                      <Loader className="w-8 h-8 text-secondary animate-spin" />
+                      <span className="ml-2 text-dark">
+                        Loading bookings...
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredBookings.length > 0 ? (
                 filteredBookings.map((booking) => (
-                  <tr key={booking.id} className="hover:bg-primary/10">
+                  <tr key={booking._id} className="hover:bg-primary/10">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-dark">
-                        {booking.guestName}
+                        {booking.salutation} {booking.name}
                       </div>
                       <div className="text-xs text-dark/70">
                         {booking.email}
@@ -182,20 +219,20 @@ const Bookings = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-dark">
-                        Room {booking.roomNumber}
+                        Room {booking.roomNo}
                       </div>
                       <div className="text-xs text-dark/70">
-                        {booking.roomType}
+                        {booking.planPackage || "Standard"}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-dark">
-                      {booking.checkIn}
+                      {new Date(booking.checkInDate).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-dark">
-                      {booking.checkOut}
+                      {new Date(booking.checkOutDate).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-dark">
-                      ₹{booking.totalAmount}
+                      ₹{booking.rate * booking.days}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
@@ -239,13 +276,6 @@ const Bookings = () => {
         </div>
       </div>
 
-      {/* Booking Form Modal */}
-      {showForm && (
-        <BookingForm
-          onSubmit={handleAddBooking}
-          onCancel={() => setShowForm(false)}
-        />
-      )}
       {/* Booking Details Modal */}
       {selectedBooking && (
         <BookingDetails

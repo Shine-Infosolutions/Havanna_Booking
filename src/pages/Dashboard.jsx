@@ -2,11 +2,13 @@ import React, { useState, useEffect } from "react";
 import { Plus, BarChart3 } from "lucide-react";
 import { STORAGE_KEYS, getStoredData } from "../utils/LocalStorage";
 import BookingForm from "../components/BookingForm";
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
   const [showForm, setShowForm] = useState(false);
   const [bookings, setBookings] = useState([]);
   const [rooms, setRooms] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Load data from localStorage
@@ -67,13 +69,13 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="p-6 space-y-6 bg-gradient-to-b from-white to-primary h-screen">
+    <div className="p-6 space-y-6  h-screen">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-[var(--color-dark)]">
           Dashboard
         </h2>
         <button
-          onClick={() => setShowForm(true)}
+          onClick={() => navigate("/booking/new")}
           className="bg-[var(--color-secondary)] text-[var(--color-dark)] px-4 py-2 rounded-lg hover:shadow-lg transition-shadow font-medium"
         >
           <Plus className="w-4 h-4 inline mr-2" />

@@ -1,4 +1,5 @@
 // src/components/BookingForm.jsx
+//Discarded
 import React, { useState, useEffect } from "react";
 import { X, Check, Calendar } from "lucide-react";
 import { STORAGE_KEYS, getStoredData, storeData } from "../utils/LocalStorage";

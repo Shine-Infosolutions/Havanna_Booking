@@ -126,7 +126,7 @@ const Rooms = () => {
   };
 
   return (
-    <div className="p-6 space-y-6 bg-gradient-to-b from-white to-primary/50 min-h-screen">
+    <div className="p-6 space-y-6 min-h-screen">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-dark">Rooms</h2>
         <button className="bg-secondary text-dark px-4 py-2 rounded-lg hover:shadow-lg transition-shadow font-medium">
