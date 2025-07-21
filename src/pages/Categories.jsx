@@ -1,97 +1,80 @@
 // src/pages/Categories.jsx
-import React, { useState, useEffect } from "react";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import React, { useState, useContext, useEffect } from "react";
+import { Plus, Edit, Trash2, Loader } from "lucide-react";
+import axios from "axios";
+import { AppContext } from "../context/AppContext.jsx";
 import CategoryForm from "../components/CategoryForm";
-import {
-  STORAGE_KEYS,
-  getStoredData,
-  storeData,
-} from "../utils/LocalStorage.js";
 
-const defaultCategories = [
-  {
-    id: 1,
-    name: "Standard Room",
-    description: "Basic accommodation with essential amenities",
-    basePrice: 120,
-    maxOccupancy: 2,
-    amenities: ["WiFi", "AC", "TV"],
-    image:
-      "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&h=200&fit=crop",
-  },
-  {
-    id: 2,
-    name: "Deluxe Suite",
-    description: "Spacious room with premium amenities",
-    basePrice: 180,
-    maxOccupancy: 4,
-    amenities: ["WiFi", "AC", "TV", "Balcony", "Mini Bar"],
-    image:
-      "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400&h=200&fit=crop",
-  },
-  {
-    id: 3,
-    name: "Presidential Suite",
-    description: "Luxury accommodation with exclusive services",
-    basePrice: 350,
-    maxOccupancy: 6,
-    amenities: [
-      "WiFi",
-      "AC",
-      "TV",
-      "Balcony",
-      "Mini Bar",
-      "Jacuzzi",
-      "Butler Service",
-    ],
-    image:
-      "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=400&h=200&fit=crop",
-  },
-];
+// Default category images based on category name
+const categoryImages = {
+  Standard:
+    "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&h=200&fit=crop",
+  Deluxe:
+    "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400&h=200&fit=crop",
+  Suite:
+    "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=400&h=200&fit=crop",
+  Family:
+    "https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=400&h=200&fit=crop",
+  Presidential:
+    "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=200&fit=crop",
+  default:
+    "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=200&fit=crop",
+};
+
+// Get image based on category name
+const getCategoryImage = (categoryName) => {
+  if (!categoryName) return categoryImages.default;
+
+  // Check if category name contains any of the keys
+  for (const key in categoryImages) {
+    if (categoryName.toLowerCase().includes(key.toLowerCase())) {
+      return categoryImages[key];
+    }
+  }
+  return categoryImages.default;
+};
 
 const Categories = () => {
+  const { categories, categoriesLoading, BACKEND_URL, fetchCategories } =
+    useContext(AppContext);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
-  const [categories, setCategories] = useState([]);
 
-  // Load categories from localStorage on component mount
-  useEffect(() => {
-    const storedCategories = getStoredData(STORAGE_KEYS.CATEGORIES);
-    if (storedCategories && storedCategories.length > 0) {
-      setCategories(storedCategories);
-    } else {
-      // Initialize with default categories if none exist
-      setCategories(defaultCategories);
-      storeData(STORAGE_KEYS.CATEGORIES, defaultCategories);
+  const handleAddCategory = async (newCategory) => {
+    try {
+      setLoading(true);
+
+      // Only send category name and status to the API
+      const categoryData = {
+        category: newCategory.name,
+        status: true,
+      };
+
+      await axios.post(`${BACKEND_URL}/api/room-categories`, categoryData);
+
+      setShowForm(false);
+      fetchCategories();
+    } catch (error) {
+      console.error("Error adding category:", error);
+      setError("Failed to add category");
+    } finally {
+      setLoading(false);
     }
-  }, []);
-
-  const handleAddCategory = (newCategory) => {
-    // Add ID to the new category
-    const categoryWithId = {
-      ...newCategory,
-      id:
-        categories.length > 0
-          ? Math.max(...categories.map((c) => c.id)) + 1
-          : 1,
-    };
-
-    // Add to categories array
-    const updatedCategories = [...categories, categoryWithId];
-    setCategories(updatedCategories);
-
-    // Store in localStorage
-    storeData(STORAGE_KEYS.CATEGORIES, updatedCategories);
-
-    // Close form
-    setShowForm(false);
   };
 
-  const handleDeleteCategory = (id) => {
-    const updatedCategories = categories.filter(
-      (category) => category.id !== id
-    );
-    setCategories(updatedCategories);
-    storeData(STORAGE_KEYS.CATEGORIES, updatedCategories);
+  const handleDeleteCategory = async (id) => {
+    try {
+      setLoading(true);
+      await axios.delete(`${BACKEND_URL}/api/room-categories/${id}`);
+
+      fetchCategories();
+    } catch (error) {
+      console.error("Error deleting category:", error);
+      setError("Failed to delete category");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -117,82 +100,96 @@ const Categories = () => {
         />
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {categories.map((category) => (
-          <div
-            key={category.id}
-            className="bg-white/30 hover:bg-white/80 border border-gray-200 backdrop-blur-sm rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all"
-          >
-            {/* Image Section */}
-            <div className="h-48 bg-gray-200 relative overflow-hidden">
-              <img
-                src={category.image}
-                alt={category.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.src =
-                    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDQwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNzUgNzVIMjI1VjEyNUgxNzVWNzVaIiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPgo8Y2lyY2xlIGN4PSIxODciIGN5PSI4NyIgcj0iMyIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNMTc1IDExMEwyMDAgOTVMMjI1IDExMFYxMjVIMTc1VjExMFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+";
-                }}
-              />
-              <div className="absolute top-2 right-2 flex space-x-2">
-                <button className="bg-white/80 text-dark p-1.5 rounded-full hover:bg-white">
-                  <Edit className="w-3 h-3" />
-                </button>
-                <button className="bg-white/80 text-red-600 p-1.5 rounded-full hover:bg-white">
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-
-            {/* Content Section */}
-            <div className="p-6">
-              <h3 className="text-lg font-semibold text-[var(--color-dark)] mb-2">
-                {category.name}
-              </h3>
-
-              <p className="text-[var(--color-dark)]/70 text-sm mb-4">
-                {category.description}
-              </p>
-
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm text-[var(--color-dark)]/70">
-                    Base Price:
-                  </span>
-                  <span className="font-semibold text-[var(--color-dark)]">
-                    ₹{category.basePrice}/night
-                  </span>
+      {categoriesLoading ? (
+        <div className="flex justify-center items-center py-12">
+          <Loader className="w-8 h-8 text-secondary animate-spin" />
+          <span className="ml-2 text-dark">Loading categories...</span>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {categories && categories.length > 0 ? (
+            categories.map((category) => (
+              <div
+                key={category._id}
+                className="bg-white/30 hover:bg-white/80 border border-gray-200 backdrop-blur-sm rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all"
+              >
+                {/* Image Section */}
+                <div className="h-48 bg-gray-200 relative overflow-hidden">
+                  <img
+                    src={getCategoryImage(category.category)}
+                    alt={category.category}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.src = categoryImages.default;
+                    }}
+                  />
+                  <div className="absolute top-2 right-2 flex space-x-2">
+                    <button className="bg-white/80 text-dark p-1.5 rounded-full hover:bg-white">
+                      <Edit className="w-3 h-3" />
+                    </button>
+                    <button
+                      className="bg-white/80 text-red-600 p-1.5 rounded-full hover:bg-white"
+                      onClick={() => handleDeleteCategory(category._id)}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex justify-between">
-                  <span className="text-sm text-[var(--color-dark)]/70">
-                    Max Occupancy:
-                  </span>
-                  <span className="font-medium text-[var(--color-dark)]">
-                    {category.maxOccupancy} guests
-                  </span>
-                </div>
+                {/* Content Section */}
+                <div className="p-6">
+                  <h3 className="text-lg font-semibold text-dark mb-2">
+                    {category.category}
+                  </h3>
 
-                <div>
-                  <p className="text-sm text-[var(--color-dark)]/70 mb-2">
-                    Amenities:
+                  <p className="text-dark/70 text-sm mb-4">
+                    {category.description ||
+                      `${category.category} room with standard amenities`}
                   </p>
-                  <div className="flex flex-wrap gap-1">
-                    {category.amenities.map((amenity, index) => (
-                      <span
-                        key={index}
-                        className="bg-[var(--color-primary)]/50 text-[var(--color-dark)] px-2 py-1 rounded text-xs"
-                      >
-                        {amenity}
+
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-dark/70">Base Price:</span>
+                      <span className="font-semibold text-dark">
+                        ₹{category.price || 1000}/night
                       </span>
-                    ))}
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span className="text-sm text-dark/70">
+                        Max Occupancy:
+                      </span>
+                      <span className="font-medium text-dark">
+                        {category.capacity || 2} guests
+                      </span>
+                    </div>
+
+                    <div>
+                      <p className="text-sm text-dark/70 mb-2">Amenities:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {(category.amenities || ["WiFi", "AC", "TV"]).map(
+                          (amenity, index) => (
+                            <span
+                              key={index}
+                              className="bg-primary/50 text-dark px-2 py-1 rounded text-xs"
+                            >
+                              {amenity}
+                            </span>
+                          )
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
+            ))
+          ) : (
+            <div className="col-span-3 text-center py-12 text-dark/70">
+              No categories found. Add your first category!
             </div>
-          </div>
-        ))}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

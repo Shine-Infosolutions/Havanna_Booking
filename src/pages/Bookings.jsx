@@ -2,13 +2,17 @@
 import React, { useState, useEffect } from "react";
 import {
   Plus,
-  Filter,
   Search,
   Eye,
   Edit,
   Trash2,
-  HelpCircle,
   Loader,
+  X,
+  Check,
+  Calendar,
+  User,
+  Home,
+  CreditCard,
 } from "lucide-react";
 import BookingDetails from "../components/BookingDetails";
 import { useNavigate } from "react-router-dom";
@@ -20,10 +24,14 @@ const Bookings = () => {
   const [bookings, setBookings] = useState([]);
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [showHelp, setShowHelp] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [bookingDetails, setBookingDetails] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [detailsLoading, setDetailsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [newStatus, setNewStatus] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -38,15 +46,20 @@ const Bookings = () => {
         const data = await response.json();
         if (data.success) {
           setBookings(data.bookings);
-          setLoading(false);
         }
       } catch (error) {
         console.error("Error fetching bookings:", error);
         setError("Failed to load bookings. Please try again later.");
+      } finally {
+        setLoading(false);
       }
     };
     fetchBookings();
   }, []);
+
+  const handleEditBooking = (booking) => {
+    navigate(`/booking/edit/${booking._id}`);
+  };
 
   const handleViewBooking = (booking) => {
     setSelectedBooking(booking);
@@ -251,7 +264,10 @@ const Bookings = () => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button className="text-dark/60 hover:text-dark">
+                        <button
+                          onClick={() => handleEditBooking(booking)}
+                          className="text-dark/60 hover:text-dark"
+                        >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button className="text-red-500 hover:text-red-700">

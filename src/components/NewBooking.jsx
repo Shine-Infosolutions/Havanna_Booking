@@ -1,5 +1,9 @@
 // src/pages/NewBooking.jsx
 import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
+import axios from "axios";
+import { useContext } from "react";
+import { AppContext } from "../context/AppContext";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -9,17 +13,22 @@ import {
   Home,
   Briefcase,
   CreditCard,
+  Loader,
+  Upload,
+  X,
 } from "lucide-react";
-import { STORAGE_KEYS, getStoredData, storeData } from "../utils/LocalStorage";
-
-const BACKEND_URL =
-  import.meta.env.BACKEND_URL || "https://havana-backend.vercel.app";
 
 const NewBooking = () => {
+  const { BACKEND_URL, categories } = useContext(AppContext);
+  const { id } = useParams();
+  const isEditMode = !!id;
   const navigate = useNavigate();
   const [rooms, setRooms] = useState([]);
+  const [filteredRooms, setFilteredRooms] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("");
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState(null);
+  const [initialLoading, setInitialLoading] = useState(isEditMode);
   const [formData, setFormData] = useState({
     // Primary Booking Info
     grcNo: "",
@@ -91,18 +100,104 @@ const NewBooking = () => {
     status: "Booked",
   });
 
+  // Fetch booking data if in edit mode
   useEffect(() => {
-    // Load available rooms
-    const storedRooms = getStoredData(STORAGE_KEYS.ROOMS) || [];
-    setRooms(storedRooms.filter((room) => room.status === "available"));
-  }, []);
+    if (isEditMode) {
+      const fetchBookingData = async () => {
+        try {
+          setInitialLoading(true);
+          const response = await axios.get(`${BACKEND_URL}/api/bookings/${id}`);
+
+          if (response.data.success) {
+            // Format dates for form inputs
+            const booking = response.data.booking;
+
+            // Convert date strings to input format (YYYY-MM-DD)
+            const formatDate = (dateString) => {
+              if (!dateString) return "";
+              return new Date(dateString).toISOString().split("T")[0];
+            };
+
+            setFormData({
+              ...booking,
+              bookingDate: formatDate(booking.bookingDate),
+              checkInDate: formatDate(booking.checkInDate),
+              checkOutDate: formatDate(booking.checkOutDate),
+              birthDate: formatDate(booking.birthDate),
+              anniversary: formatDate(booking.anniversary),
+              roomNo: booking.roomNumber || booking.roomNo,
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching booking:", error);
+          setApiError("Failed to load booking data");
+        } finally {
+          setInitialLoading(false);
+        }
+      };
+
+      fetchBookingData();
+    }
+  }, [id, isEditMode, BACKEND_URL]);
+
+  useEffect(() => {
+    const fetchRooms = async () => {
+      try {
+        setLoading(true);
+        const params = new URLSearchParams();
+
+        if (selectedCategory) {
+          params.append("category", selectedCategory);
+        }
+
+        params.append("status", "true"); // Only get available rooms
+
+        const response = await axios.get(
+          `${BACKEND_URL}/api/rooms?${params.toString()}`
+        );
+
+        if (response.data.success) {
+          setRooms(response.data.rooms);
+          setFilteredRooms(response.data.rooms);
+        }
+      } catch (error) {
+        console.error("Error fetching rooms:", error);
+        setApiError("Failed to load available rooms");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRooms();
+  }, [selectedCategory, BACKEND_URL]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === "checkbox" ? checked : value,
-    });
+
+    // Special handling for room selection to update the rate
+    if (name === "roomNo") {
+      const selectedRoom = filteredRooms.find(
+        (room) => room.room_number === value
+      );
+      if (selectedRoom) {
+        setFormData({
+          ...formData,
+          [name]: value,
+          rate: selectedRoom.price, // Update the rate based on selected room
+        });
+      } else {
+        setFormData({
+          ...formData,
+          [name]: value,
+        });
+      }
+    } else {
+      // Normal handling for other inputs
+      setFormData({
+        ...formData,
+        [name]: type === "checkbox" ? checked : value,
+      });
+    }
   };
 
   // Calculate days when check-in or check-out dates change
@@ -122,19 +217,40 @@ const NewBooking = () => {
   }, [formData.checkInDate, formData.checkOutDate]);
 
   // Update rate when room is selected
-  useEffect(() => {
-    if (formData.roomNo) {
-      const selectedRoom = rooms.find(
-        (room) => room.number === formData.roomNo
-      );
-      if (selectedRoom) {
-        setFormData((prev) => ({
-          ...prev,
-          rate: selectedRoom.price,
-        }));
-      }
+  // useEffect(() => {
+  //   if (formData.roomNo) {
+  //     const selectedRoom = rooms.find(
+  //       (room) => room.number === formData.roomNo
+  //     );
+  //     if (selectedRoom) {
+  //       setFormData((prev) => ({
+  //         ...prev,
+  //         rate: selectedRoom.price,
+  //       }));
+  //     }
+  //   }
+  // }, [formData.roomNo, rooms]);
+
+  const handleGuestPhotoUpload = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const imageUrl = URL.createObjectURL(file);
+      setFormData({
+        ...formData,
+        photoUrl: imageUrl,
+        photoFile: file,
+      });
     }
-  }, [formData.roomNo, rooms]);
+  };
+
+  const removeGuestPhoto = () => {
+    URL.revokeObjectURL(formData.photoUrl);
+    setFormData({
+      ...formData,
+      photoUrl: "",
+      photoFile: null,
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -142,67 +258,232 @@ const NewBooking = () => {
     setApiError(null);
 
     try {
-      // Generate a unique booking ID
-      const bookingId = Date.now();
-      const selectedRoom = rooms.find(
-        (room) => room.number === formData.roomNo
+      const selectedRoom = filteredRooms.find(
+        (room) => room.room_number === formData.roomNo
       );
 
-      if (!selectedRoom) {
+      if (!selectedRoom && !isEditMode) {
         alert("Please select a valid room");
         setLoading(false);
         return;
       }
 
-      // Create booking object
-      const booking = {
-        ...formData,
-        roomId: selectedRoom.id,
-        roomType: selectedRoom.type,
-        roomNumber: selectedRoom.number,
-        totalAmount: formData.rate * formData.days,
-      };
+      // Create form data for file upload
+      const formDataToSend = new FormData();
 
-      // Send booking data to backend API
-      const response = await fetch(`${BACKEND_URL}/api/bookings`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(booking),
-      });
+      // Add basic booking details
+      formDataToSend.append("bookingDate", formData.bookingDate);
+      formDataToSend.append("checkInDate", formData.checkInDate);
+      formDataToSend.append("checkOutDate", formData.checkOutDate);
+      formDataToSend.append("days", formData.days);
+      formDataToSend.append("timeIn", formData.timeIn);
+      formDataToSend.append("timeOut", formData.timeOut);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create booking");
+      // Guest info
+      formDataToSend.append("salutation", formData.salutation);
+      formDataToSend.append("name", formData.name);
+      formDataToSend.append("age", formData.age || 0);
+      formDataToSend.append("gender", formData.gender);
+      formDataToSend.append("address", formData.address);
+      formDataToSend.append("city", formData.city);
+      formDataToSend.append("nationality", formData.nationality);
+      formDataToSend.append("mobileNo", formData.mobileNo);
+      formDataToSend.append("email", formData.email);
+      formDataToSend.append("phoneNo", formData.phoneNo);
+      formDataToSend.append("birthDate", formData.birthDate);
+      formDataToSend.append("anniversary", formData.anniversary);
+
+      // Company info
+      formDataToSend.append("companyName", formData.companyName);
+      formDataToSend.append("companyGSTIN", formData.companyGSTIN);
+
+      // ID proof
+      formDataToSend.append("idProofType", formData.idProofType);
+      formDataToSend.append("idProofNumber", formData.idProofNumber);
+
+      // Room info
+      formDataToSend.append("roomNo", formData.roomNo);
+      formDataToSend.append("planPackage", formData.planPackage);
+      formDataToSend.append("noOfAdults", formData.noOfAdults);
+      formDataToSend.append("noOfChildren", formData.noOfChildren);
+      formDataToSend.append("rate", formData.rate);
+      formDataToSend.append("taxIncluded", formData.taxIncluded);
+      formDataToSend.append("serviceCharge", formData.serviceCharge);
+      formDataToSend.append("isLeader", formData.isLeader);
+
+      // Travel info
+      formDataToSend.append("arrivedFrom", formData.arrivedFrom);
+      formDataToSend.append("destination", formData.destination);
+      formDataToSend.append("remark", formData.remark);
+      formDataToSend.append("businessSource", formData.businessSource);
+      formDataToSend.append("marketSegment", formData.marketSegment);
+      formDataToSend.append("purposeOfVisit", formData.purposeOfVisit);
+
+      // Financial info
+      formDataToSend.append("discountPercent", formData.discountPercent);
+      formDataToSend.append("discountRoomSource", formData.discountRoomSource);
+      formDataToSend.append("paymentMode", formData.paymentMode);
+      formDataToSend.append("paymentStatus", formData.paymentStatus);
+      formDataToSend.append("bookingRefNo", formData.bookingRefNo);
+      formDataToSend.append("mgmtBlock", formData.mgmtBlock);
+      formDataToSend.append("billingInstruction", formData.billingInstruction);
+
+      // Misc
+      formDataToSend.append("temperature", formData.temperature || 0);
+      formDataToSend.append("fromCSV", formData.fromCSV);
+      formDataToSend.append("epabx", formData.epabx);
+      formDataToSend.append("vip", formData.vip);
+      formDataToSend.append("status", formData.status);
+
+      // Add room details
+      formDataToSend.append(
+        "roomId",
+        selectedRoom?._id || formData.roomId || ""
+      );
+      formDataToSend.append(
+        "roomType",
+        selectedRoom?.category?.category || formData.roomType || ""
+      );
+      formDataToSend.append(
+        "roomNumber",
+        selectedRoom?.room_number || formData.roomNumber || formData.roomNo
+      );
+      formDataToSend.append("totalAmount", calculateTotal());
+
+      // Add image files with the EXACT field names expected by the backend
+      if (formData.idProofImageFile) {
+        formDataToSend.append("idProofImageUrl", formData.idProofImageFile);
       }
 
-      const data = await response.json();
+      if (formData.idProofImageFile2) {
+        formDataToSend.append("idProofImageUrl2", formData.idProofImageFile2);
+      }
 
-      // Update room status
-      const existingRooms = getStoredData(STORAGE_KEYS.ROOMS) || [];
-      const updatedRooms = existingRooms.map((room) => {
-        if (room.number === formData.roomNo) {
-          return { ...room, status: "occupied", guest: formData.name };
-        }
-        return room;
-      });
-      storeData(STORAGE_KEYS.ROOMS, updatedRooms);
+      // Add guest photo if available
+      if (formData.photoFile) {
+        formDataToSend.append("photoUrl", formData.photoFile);
+      }
 
-      // Navigate back to bookings page
-      navigate("/bookings");
+      let response;
+
+      if (isEditMode) {
+        // Update existing booking
+        response = await axios.put(
+          `${BACKEND_URL}/api/bookings/${id}`,
+          formDataToSend,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+      } else {
+        // Create new booking
+        response = await axios.post(
+          `${BACKEND_URL}/api/bookings`,
+          formDataToSend,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+      }
+
+      if (response.data.success) {
+        // Navigate back to bookings page
+        navigate("/bookings");
+      } else {
+        throw new Error(
+          response.data.message ||
+            `Failed to ${isEditMode ? "update" : "create"} booking`
+        );
+      }
     } catch (error) {
-      console.error("Error creating booking:", error);
+      console.error(
+        `Error ${isEditMode ? "updating" : "creating"} booking:`,
+        error
+      );
       setApiError(
-        error.message || "Failed to create booking. Please try again."
+        error.message ||
+          `Failed to ${
+            isEditMode ? "update" : "create"
+          } booking. Please try again.`
       );
     } finally {
       setLoading(false);
     }
   };
 
-  // Calculate total amount
-  const totalAmount = formData.rate * formData.days;
+  const handleIdProofImageUpload = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const imageUrl = URL.createObjectURL(file);
+      setFormData({
+        ...formData,
+        idProofImageUrl: imageUrl,
+        idProofImageFile: file,
+      });
+    }
+  };
+
+  const handleIdProofImage2Upload = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const imageUrl = URL.createObjectURL(file);
+      setFormData({
+        ...formData,
+        idProofImageUrl2: imageUrl,
+        idProofImageFile2: file, // Store the file for later upload
+      });
+    }
+  };
+
+  const removeIdProofImage = (imageNum) => {
+    if (imageNum === 1) {
+      URL.revokeObjectURL(formData.idProofImageUrl); // Clean up the URL
+      setFormData({
+        ...formData,
+        idProofImageUrl: "",
+        idProofImageFile: null,
+      });
+    } else {
+      URL.revokeObjectURL(formData.idProofImageUrl2); // Clean up the URL
+      setFormData({
+        ...formData,
+        idProofImageUrl2: "",
+        idProofImageFile2: null,
+      });
+    }
+  };
+
+  // Calculate total amount with discount
+  const calculateTotal = () => {
+    const baseAmount = formData.rate * formData.days;
+    if (formData.discountPercent > 0) {
+      const discountAmount = (baseAmount * formData.discountPercent) / 100;
+      return baseAmount - discountAmount;
+    }
+    return baseAmount;
+  };
+
+  const totalAmount = calculateTotal();
+
+  // Update the page title and button text based on mode
+  const pageTitle = isEditMode ? "Edit Booking" : "New Booking";
+  const submitButtonText = isEditMode ? "Update Booking" : "Create Booking";
+
+  // Show loading state while fetching booking data
+  if (initialLoading) {
+    return (
+      <div className="p-6 min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <Loader className="w-12 h-12 text-secondary animate-spin" />
+          <span className="mt-4 text-dark">Loading booking data...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6  min-h-screen">
@@ -213,7 +494,7 @@ const NewBooking = () => {
         >
           <ArrowLeft className="w-5 h-5 text-dark" />
         </button>
-        <h2 className="text-2xl font-bold text-dark">New Booking</h2>
+        <h2 className="text-2xl font-bold text-dark">{pageTitle}</h2>
       </div>
 
       {apiError && (
@@ -359,6 +640,40 @@ const NewBooking = () => {
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="col-span-3 mt-4">
+              <label className="block text-sm font-medium text-dark/70 mb-1">
+                Guest Photo
+              </label>
+              {formData.photoUrl ? (
+                <div className="relative h-40 w-40 bg-gray-100 rounded-lg overflow-hidden">
+                  <img
+                    src={formData.photoUrl}
+                    alt="Guest Photo"
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={removeGuestPhoto}
+                    className="absolute top-2 right-2 bg-white/80 p-1 rounded-full text-red-500 hover:bg-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-40 h-40 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                    <p className="text-xs text-gray-500">Upload guest photo</p>
+                  </div>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleGuestPhotoUpload}
+                  />
+                </label>
+              )}
+            </div>
             <div>
               <label className="block text-sm font-medium text-dark/70 mb-1">
                 Salutation
@@ -566,6 +881,77 @@ const NewBooking = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
               />
             </div>
+            {/* ID Proof Image Upload - Front */}
+            <div>
+              <label className="block text-sm font-medium text-dark/70 mb-1">
+                ID Proof Image (Front)
+              </label>
+              {formData.idProofImageUrl ? (
+                <div className="relative h-32 bg-gray-100 rounded-lg overflow-hidden">
+                  <img
+                    src={formData.idProofImageUrl}
+                    alt="ID Proof Front"
+                    className="w-full h-full object-contain"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeIdProofImage(1)}
+                    className="absolute top-2 right-2 bg-white/80 p-1 rounded-full text-red-500 hover:bg-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                    <p className="text-xs text-gray-500">Upload front side</p>
+                  </div>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleIdProofImageUpload}
+                  />
+                </label>
+              )}
+            </div>
+
+            {/* ID Proof Image Upload - Back */}
+            <div>
+              <label className="block text-sm font-medium text-dark/70 mb-1">
+                ID Proof Image (Back)
+              </label>
+              {formData.idProofImageUrl2 ? (
+                <div className="relative h-32 bg-gray-100 rounded-lg overflow-hidden">
+                  <img
+                    src={formData.idProofImageUrl2}
+                    alt="ID Proof Back"
+                    className="w-full h-full object-contain"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeIdProofImage(2)}
+                    className="absolute top-2 right-2 bg-white/80 p-1 rounded-full text-red-500 hover:bg-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                    <p className="text-xs text-gray-500">Upload back side</p>
+                  </div>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleIdProofImage2Upload}
+                  />
+                </label>
+              )}
+            </div>
           </div>
         </div>
 
@@ -615,6 +1001,23 @@ const NewBooking = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-dark/70 mb-1">
+                Room Category
+              </label>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
+              >
+                <option value="">All Categories</option>
+                {categories.map((category) => (
+                  <option key={category._id} value={category._id}>
+                    {category.category}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark/70 mb-1">
                 Room Number
               </label>
               <select
@@ -625,9 +1028,11 @@ const NewBooking = () => {
                 required
               >
                 <option value="">Select Room</option>
-                {rooms.map((room) => (
-                  <option key={room.id} value={room.number}>
-                    Room {room.number} - {room.type} (₹{room.price}/night)
+                {filteredRooms.map((room) => (
+                  <option key={room._id} value={room.room_number}>
+                    Room {room.room_number} -{" "}
+                    {room.category?.category || "Standard"} (₹{room.price}
+                    /night)
                   </option>
                 ))}
               </select>
@@ -885,7 +1290,38 @@ const NewBooking = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
               />
             </div>
-
+            <div>
+              <label className="block text-sm font-medium text-dark/70 mb-1">
+                Market Segment
+              </label>
+              <select
+                name="marketSegment"
+                value={formData.marketSegment}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
+              >
+                <option value="">Select Market Segment</option>
+                <option value="Corporate">Corporate</option>
+                <option value="Leisure">Leisure</option>
+                <option value="Group">Group</option>
+                <option value="Travel Agent">Travel Agent</option>
+                <option value="Online">Online</option>
+                <option value="Direct">Direct</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark/70 mb-1">
+                Temperature (°F)
+              </label>
+              <input
+                type="number"
+                name="temperature"
+                value={formData.temperature}
+                onChange={handleInputChange}
+                step="0.1"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
+              />
+            </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-dark/70 mb-1">
                 Remarks
@@ -961,10 +1397,37 @@ const NewBooking = () => {
         {/* Total Amount */}
         <div className="bg-secondary/80 backdrop-blur-sm p-6 rounded-lg">
           <div className="flex justify-between items-center">
+            <span className="font-medium text-dark">Base Amount:</span>
+            <span className="text-lg font-medium text-dark">
+              ₹{formData.rate * formData.days}
+            </span>
+          </div>
+
+          {formData.discountPercent > 0 && (
+            <div className="flex justify-between items-center mt-2 pt-2 border-t border-dark/10">
+              <span className="font-medium text-dark">
+                Discount ({formData.discountPercent}%):
+              </span>
+              <span className="text-lg font-medium text-red-600">
+                -₹
+                {(formData.rate * formData.days * formData.discountPercent) /
+                  100}
+              </span>
+            </div>
+          )}
+
+          <div className="flex justify-between items-center mt-2 pt-2 border-t border-dark/10">
             <span className="font-medium text-dark">Total Amount:</span>
             <span className="text-xl font-bold text-dark">₹{totalAmount}</span>
           </div>
-
+          {formData.paymentStatus === "Partial" && (
+            <div className="flex justify-between items-center mt-2 pt-2 border-t border-dark/10">
+              <span className="font-medium text-dark">Upfront Payment:</span>
+              <span className="text-lg font-bold text-dark">
+                ₹{formData.upfrontPayment}
+              </span>
+            </div>
+          )}
           {formData.paymentStatus === "Partial" && (
             <div className="flex justify-between items-center mt-2 pt-2 border-t border-dark/10">
               <span className="font-medium text-dark">Balance Due:</span>
@@ -987,7 +1450,7 @@ const NewBooking = () => {
             ) : (
               <>
                 <Save className="w-5 h-5 mr-2" />
-                Create Booking
+                {submitButtonText}
               </>
             )}
           </button>

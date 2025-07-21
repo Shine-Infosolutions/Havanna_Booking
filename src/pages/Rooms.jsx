@@ -1,138 +1,141 @@
-import React, { useState, useEffect } from "react";
-import { Plus, Edit, Trash2 } from "lucide-react";
-import { STORAGE_KEYS, getStoredData } from "../utils/LocalStorage.js";
+import React, { useState, useEffect, useContext } from "react";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Loader,
+  X,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { AppContext } from "../context/AppContext";
+import EditRoom from "../components/EditRoom";
 
 const Rooms = () => {
+  const navigate = useNavigate();
+  const { categories, BACKEND_URL } = useContext(AppContext);
   const [statusFilter, setStatusFilter] = useState("all");
-  const [categories, setCategories] = useState([]);
-  const [roomsData, setRoomsData] = useState([
-    {
-      id: 1,
-      number: "101",
-      type: "Standard",
-      status: "occupied",
-      guest: "Sarah Johnson",
-      price: 120,
-      amenities: ["WiFi", "AC", "TV"],
-      floor: 1,
-      capacity: 2,
-      image:
-        "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&h=200&fit=crop",
-    },
-    {
-      id: 2,
-      number: "205",
-      type: "Deluxe Suite",
-      status: "occupied",
-      guest: "John Smith",
-      price: 180,
-      amenities: ["WiFi", "AC", "TV", "Balcony", "Mini Bar"],
-      floor: 2,
-      capacity: 4,
-      image:
-        "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400&h=200&fit=crop",
-    },
-    {
-      id: 3,
-      number: "301",
-      type: "Presidential Suite",
-      status: "available",
-      guest: null,
-      price: 350,
-      amenities: [
-        "WiFi",
-        "AC",
-        "TV",
-        "Balcony",
-        "Mini Bar",
-        "Jacuzzi",
-        "Butler Service",
-      ],
-      floor: 3,
-      capacity: 6,
-      image:
-        "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=400&h=200&fit=crop",
-    },
-    {
-      id: 4,
-      number: "102",
-      type: "Standard",
-      status: "maintenance",
-      guest: null,
-      price: 120,
-      amenities: ["WiFi", "AC", "TV"],
-      floor: 1,
-      capacity: 2,
-      image:
-        "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&h=200&fit=crop",
-    },
-    {
-      id: 5,
-      number: "103",
-      type: "Standard",
-      status: "available",
-      guest: null,
-      price: 120,
-      amenities: ["WiFi", "AC", "TV"],
-      floor: 1,
-      capacity: 2,
-      image:
-        "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&h=200&fit=crop",
-    },
-    {
-      id: 6,
-      number: "206",
-      type: "Deluxe Suite",
-      status: "occupied",
-      guest: "Robert Brown",
-      price: 180,
-      amenities: ["WiFi", "AC", "TV", "Balcony", "Mini Bar"],
-      floor: 2,
-      capacity: 4,
-      image:
-        "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400&h=200&fit=crop",
-    },
-  ]);
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [rooms, setRooms] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [editingRoom, setEditingRoom] = useState(null);
+  const [showEditForm, setShowEditForm] = useState(false);
 
-  // Load categories from localStorage
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+
   useEffect(() => {
-    const storedCategories = getStoredData(STORAGE_KEYS.CATEGORIES);
-    if (storedCategories) {
-      setCategories(storedCategories);
-    }
-  }, []);
+    const fetchRooms = async () => {
+      try {
+        setLoading(true);
 
-  const getRoomStatusColor = (status) => {
-    switch (status) {
-      case "available":
-        return "bg-green-100 text-green-800";
-      case "occupied":
-        return "bg-red-100 text-red-800";
-      case "maintenance":
-        return "bg-yellow-100 text-yellow-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
+        // Build query parameters
+        const params = new URLSearchParams();
+        params.append("page", page);
+        params.append("limit", limit);
+
+        if (searchTerm) {
+          params.append("search", searchTerm);
+        }
+
+        if (categoryFilter) {
+          params.append("category", categoryFilter);
+        }
+
+        if (statusFilter !== "all") {
+          params.append(
+            "status",
+            statusFilter === "available" ? "true" : "false"
+          );
+        }
+
+        const response = await fetch(
+          `${BACKEND_URL}/api/rooms?${params.toString()}`
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch rooms");
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+          setRooms(data.rooms);
+          setTotal(data.total);
+          setTotalPages(data.totalPages);
+        }
+      } catch (error) {
+        console.error("Error fetching rooms:", error);
+        setError("Failed to load rooms. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRooms();
+  }, [page, limit, searchTerm, categoryFilter, statusFilter]);
+
+  const handleEditRoom = (room) => {
+    setEditingRoom(room);
+    setShowEditForm(true);
   };
 
-  const filteredRooms =
-    statusFilter === "all"
-      ? roomsData
-      : roomsData.filter((room) => room.status === statusFilter);
+  const handleSaveRoom = (updatedRoom) => {
+    // Update the rooms array with the edited room
+    setRooms(
+      rooms.map((room) => (room._id === updatedRoom._id ? updatedRoom : room))
+    );
+    setShowEditForm(false);
+    setEditingRoom(null);
+  };
 
-  // Get category details for a room
-  const getCategoryDetails = (roomType) => {
-    return categories.find((cat) => cat.name === roomType);
+  const getRoomStatusColor = (status) => {
+    if (status === true) return "bg-green-100 text-green-800"; // available
+    if (status === false) return "bg-red-100 text-red-800"; // occupied
+    return "bg-yellow-100 text-yellow-800"; // maintenance or other
+  };
+
+  const getRoomStatusText = (status) => {
+    if (status === true) return "available";
+    if (status === false) return "occupied";
+    return "maintenance";
   };
 
   return (
     <div className="p-6 space-y-6 min-h-screen">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-dark">Rooms</h2>
-        <button className="bg-secondary text-dark px-4 py-2 rounded-lg hover:shadow-lg transition-shadow font-medium">
+        <button
+          onClick={() => navigate("/rooms/new")}
+          className="bg-secondary text-dark px-4 py-2 rounded-lg hover:shadow-lg transition-shadow font-medium"
+        >
           <Plus className="w-4 h-4 inline mr-2" />
           Add Room
         </button>
+      </div>
+
+      {/* Search and Filter */}
+      <div className="flex flex-col md:flex-row md:items-center gap-4">
+        <div className="relative flex-grow">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-dark/50 w-4 h-4" />
+          <input
+            type="text"
+            placeholder="Search by room title or number..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setPage(1); // Reset to first page on new search
+            }}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
+          />
+        </div>
       </div>
 
       {/* Filter Buttons */}
@@ -140,7 +143,10 @@ const Rooms = () => {
         {["all", "available", "occupied", "maintenance"].map((status) => (
           <button
             key={status}
-            onClick={() => setStatusFilter(status)}
+            onClick={() => {
+              setStatusFilter(status);
+              setPage(1); // Reset to first page on filter change
+            }}
             className={`px-4 py-2 rounded-lg capitalize transition-colors ${
               statusFilter === status
                 ? "bg-secondary text-dark font-medium"
@@ -153,118 +159,191 @@ const Rooms = () => {
       </div>
 
       {categories.length > 0 && (
-        <div className="flex space-x-2 mt-4">
+        <div className="flex flex-wrap gap-2 mt-4">
           <span className="text-dark/70 self-center">Filter by Category:</span>
+          <button
+            onClick={() => {
+              setCategoryFilter("");
+              setPage(1);
+            }}
+            className={`px-3 py-1 rounded-lg text-sm ${
+              categoryFilter === ""
+                ? "bg-secondary text-dark font-medium"
+                : "bg-primary/30 text-dark"
+            }`}
+          >
+            All
+          </button>
           {categories.map((category) => (
             <button
-              key={category.id}
-              className="px-3 py-1 bg-primary/30 text-dark rounded-lg text-sm"
+              key={category._id}
+              onClick={() => {
+                setCategoryFilter(category._id);
+                setPage(1);
+              }}
+              className={`px-3 py-1 rounded-lg text-sm ${
+                categoryFilter === category._id
+                  ? "bg-secondary text-dark font-medium"
+                  : "bg-primary/30 text-dark"
+              }`}
             >
-              {category.name}
+              {category.category}
             </button>
           ))}
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredRooms.map((room) => {
-          const categoryDetails = getCategoryDetails(room.type);
+      {error && <div className="text-red-500 text-sm">{error}</div>}
 
-          return (
-            <div
-              key={room.id}
-              className="bg-primary/50 hover:bg-primary border border-gray-200 backdrop-blur-sm rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all"
-            >
-              {/* Image Section */}
-              <div className="h-48 bg-gray-200 relative overflow-hidden">
-                <img
-                  src={categoryDetails?.image || room.image}
-                  alt={`Room ${room.number}`}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.target.src =
-                      "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDQwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNzUgNzVIMjI1VjEyNUgxNzVWNzVaIiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPgo8Y2lyY2xlIGN4PSIxODciIGN5PSI4NyIgcj0iMyIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNMTc1IDExMEwyMDAgOTVMMjI1IDExMFYxMjVIMTc1VjExMFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+";
-                  }}
-                />
-                <div className="absolute top-2 right-2 flex space-x-2">
-                  <button className="bg-white/80 text-dark p-1.5 rounded-full hover:bg-white">
-                    <Edit className="w-3 h-3" />
-                  </button>
-                  <button className="bg-white/80 text-red-600 p-1.5 rounded-full hover:bg-white">
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </div>
-                <div className="absolute top-2 left-2">
-                  <span
-                    className={`px-2 py-1 text-xs rounded-full ${getRoomStatusColor(
-                      room.status
-                    )}`}
-                  >
-                    {room.status}
-                  </span>
-                </div>
-              </div>
-
-              {/* Content Section */}
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-lg font-semibold text-dark">
-                    Room {room.number}
-                  </h3>
-                  <span className="text-sm text-dark/70">
-                    Floor {room.floor}
-                  </span>
-                </div>
-
-                <p className="text-dark/70 text-sm mb-4">{room.type}</p>
-
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-dark/70">Price:</span>
-                    <span className="font-semibold text-dark">
-                      ₹{categoryDetails?.basePrice || room.price}/night
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between">
-                    <span className="text-sm text-dark/70">Capacity:</span>
-                    <span className="font-medium text-dark">
-                      {categoryDetails?.maxOccupancy || room.capacity} guests
-                    </span>
-                  </div>
-
-                  {room.guest && (
-                    <div className="flex justify-between">
-                      <span className="text-sm text-dark/70">
-                        Current Guest:
-                      </span>
-                      <span className="font-medium text-dark">
-                        {room.guest}
+      {loading ? (
+        <div className="flex justify-center items-center py-12">
+          <Loader className="w-8 h-8 text-secondary animate-spin" />
+          <span className="ml-2 text-dark">Loading rooms...</span>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {rooms.length > 0 ? (
+              rooms.map((room) => (
+                <div
+                  key={room._id}
+                  className="bg-primary/50 hover:bg-primary border border-gray-200 backdrop-blur-sm rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all"
+                >
+                  {/* Image Section */}
+                  <div className="h-48 bg-gray-200 relative overflow-hidden">
+                    <img
+                      src={
+                        room.photos && room.photos.length > 0
+                          ? room.photos[0]
+                          : null
+                      }
+                      alt={`Room ${room.room_number}`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.src =
+                          "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDQwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNzUgNzVIMjI1VjEyNUgxNzVWNzVaIiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPgo8Y2lyY2xlIGN4PSIxODciIGN5PSI4NyIgcj0iMyIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNMTc1IDExMEwyMDAgOTVMMjI1IDExMFYxMjVIMTc1VjExMFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+";
+                      }}
+                    />
+                    <div className="absolute top-2 right-2 flex space-x-2">
+                      <button
+                        onClick={() => handleEditRoom(room)}
+                        className="bg-white/80 cursor-pointer text-dark p-1.5 rounded-full hover:bg-white"
+                      >
+                        <Edit className="w-3 h-3" />
+                      </button>
+                      <button className="bg-white/80 text-red-600 p-1.5 rounded-full hover:bg-white">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                    <div className="absolute top-2 left-2">
+                      <span
+                        className={`px-2 py-1 text-xs rounded-full ${getRoomStatusColor(
+                          room.status
+                        )}`}
+                      >
+                        {getRoomStatusText(room.status)}
                       </span>
                     </div>
-                  )}
+                  </div>
 
-                  <div>
-                    <p className="text-sm text-dark/70 mb-2">Amenities:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {(categoryDetails?.amenities || room.amenities).map(
-                        (amenity, index) => (
-                          <span
-                            key={index}
-                            className="bg-primary/50 text-dark px-2 py-1 rounded text-xs"
-                          >
-                            {amenity}
-                          </span>
-                        )
+                  {/* Content Section */}
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-lg font-semibold text-dark">
+                        Room {room.room_number}
+                      </h3>
+                      <span className="text-sm text-dark/70">
+                        Floor {room.floor || 1}
+                      </span>
+                    </div>
+
+                    <p className="text-dark/80 text-sm mb-4">
+                      {room.category ? room.category.category : room.title}
+                    </p>
+
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-dark/70">Price:</span>
+                        <span className="font-semibold text-dark">
+                          ₹{room.price}/night
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between">
+                        <span className="text-sm text-dark/70">Capacity:</span>
+                        <span className="font-medium text-dark">
+                          {room.category ? room.category.maxOccupancy : 2}{" "}
+                          guests
+                        </span>
+                      </div>
+
+                      {room.is_oos && (
+                        <div className="mt-2 py-1 px-2 bg-yellow-100 text-yellow-800 text-xs rounded">
+                          Out of Service
+                        </div>
+                      )}
+
+                      {room.extra_bed && (
+                        <div className="mt-2 py-1 px-2 bg-blue-100 text-blue-800 text-xs rounded">
+                          Extra Bed Available
+                        </div>
                       )}
                     </div>
                   </div>
                 </div>
+              ))
+            ) : (
+              <div className="col-span-3 text-center py-12 text-dark/70">
+                No rooms found matching your criteria
               </div>
+            )}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center mt-6 space-x-2">
+              <button
+                onClick={() => setPage(Math.max(1, page - 1))}
+                disabled={page === 1}
+                className={`p-2 rounded-lg ${
+                  page === 1
+                    ? "text-dark/40 cursor-not-allowed"
+                    : "text-dark hover:bg-secondary/50"
+                }`}
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+
+              <span className="text-dark">
+                Page {page} of {totalPages}
+              </span>
+
+              <button
+                onClick={() => setPage(Math.min(totalPages, page + 1))}
+                disabled={page === totalPages}
+                className={`p-2 rounded-lg ${
+                  page === totalPages
+                    ? "text-dark/40 cursor-not-allowed"
+                    : "text-dark hover:bg-secondary/50"
+                }`}
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
             </div>
-          );
-        })}
-      </div>
+          )}
+        </>
+      )}
+
+      {showEditForm && editingRoom && (
+        <EditRoom
+          room={editingRoom}
+          onClose={() => {
+            setShowEditForm(false);
+            setEditingRoom(null);
+          }}
+          onSave={handleSaveRoom}
+        />
+      )}
     </div>
   );
 };
