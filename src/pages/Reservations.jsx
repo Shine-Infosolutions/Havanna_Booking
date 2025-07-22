@@ -78,6 +78,10 @@ const Reservations = () => {
     }
   };
 
+  const handleCreateBookingFromReservation = (reservationId) => {
+    navigate("/booking/new", { state: { reservationId } });
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case "Confirmed":
@@ -112,7 +116,7 @@ const Reservations = () => {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-dark">Reservations</h2>
         <button
-          onClick={handleNewReservation}
+          onClick={() => navigate("/reservations/new")}
           className="bg-secondary text-dark px-4 py-2 rounded-lg hover:shadow-lg transition-shadow font-medium"
         >
           <Plus className="w-4 h-4 inline mr-2" />
@@ -253,6 +257,15 @@ const Reservations = () => {
                           className="text-red-500 hover:text-red-700"
                         >
                           <Trash2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleCreateBookingFromReservation(reservation._id)
+                          }
+                          className="text-blue-500 hover:text-blue-700"
+                          title="Create Booking"
+                        >
+                          <Calendar className="w-4 h-4" />
                         </button>
                       </div>
                     </td>

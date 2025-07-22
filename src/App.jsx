@@ -9,11 +9,22 @@ import NewBooking from "./components/NewBooking";
 import NewRoom from "./components/NewRoom";
 import ReservationForm from "./components/ReservationForm";
 import Reservations from "./pages/Reservations";
+import { ToastContainer, Zoom } from "react-toastify";
 
 const App = () => {
   return (
     <>
       <div className="fixed top-0 left-0 min-w-full bg-gradient-to-b from-white to-primary/60 min-h-screen -z-10"></div>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={true}
+        closeOnClick
+        pauseOnHover
+        draggable
+        pauseOnFocusLoss
+        transition={Zoom}
+      />
       <div className=" min-h-screen flex">
         <Sidebar />
         <main className="flex-1 md:ml-64">
@@ -26,7 +37,11 @@ const App = () => {
             <Route path="/rooms/new" element={<NewRoom />} />
             <Route path="/booking/edit/:id" element={<NewBooking />} />
             <Route path="reservations" element={<Reservations />} />
-            <Route path="reservations/form" element={<ReservationForm />} />
+            <Route path="/reservations/new" element={<ReservationForm />} />
+            <Route
+              path="/reservations/edit/:id"
+              element={<ReservationForm />}
+            />{" "}
           </Routes>
         </main>
       </div>

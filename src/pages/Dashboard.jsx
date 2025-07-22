@@ -109,13 +109,22 @@ const Dashboard = () => {
     <div className="p-6 space-y-6 h-screen">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-dark">Dashboard</h2>
-        <button
-          onClick={() => navigate("/booking/new")}
-          className="bg-secondary text-dark px-4 py-2 rounded-lg hover:shadow-lg transition-shadow font-medium"
-        >
-          <Plus className="w-4 h-4 inline mr-2" />
-          New Booking
-        </button>
+        <div className="space-x-4">
+          <button
+            onClick={() => navigate("/reservations/new")}
+            className="bg-secondary text-dark px-4 py-2 rounded-lg hover:shadow-lg transition-shadow font-medium"
+          >
+            <Plus className="w-4 h-4 inline mr-2" />
+            New Reservation
+          </button>
+          <button
+            onClick={() => navigate("/booking/new")}
+            className="bg-secondary text-dark px-4 py-2 rounded-lg hover:shadow-lg transition-shadow font-medium"
+          >
+            <Plus className="w-4 h-4 inline mr-2" />
+            New Booking
+          </button>
+        </div>
       </div>
 
       {error && (

@@ -1,6 +1,6 @@
 // src/pages/NewBooking.jsx
-import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
+import { useParams, useLocation } from "react-router-dom";
 import axios from "axios";
 import { useContext } from "react";
 import { AppContext } from "../context/AppContext";
@@ -17,6 +17,8 @@ import {
   Upload,
   X,
 } from "lucide-react";
+import { toast } from "react-toastify";
+import Webcam from "react-webcam";
 
 const NewBooking = () => {
   const { BACKEND_URL, categories } = useContext(AppContext);
@@ -29,6 +31,11 @@ const NewBooking = () => {
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState(null);
   const [initialLoading, setInitialLoading] = useState(isEditMode);
+  const location = useLocation();
+  const reservationId = location.state?.reservationId;
+  const [showCamera, setShowCamera] = useState(false);
+  const [currentCameraTarget, setCurrentCameraTarget] = useState(null); // 'front' or 'back'
+  const webcamRef = useRef(null);
   const [formData, setFormData] = useState({
     // Primary Booking Info
     grcNo: "",
@@ -100,6 +107,84 @@ const NewBooking = () => {
     status: "Booked",
   });
 
+  useEffect(() => {
+    if (reservationId) {
+      const fetchReservationData = async () => {
+        try {
+          setInitialLoading(true);
+          const response = await axios.get(
+            `${BACKEND_URL}/api/reservation/${reservationId}`
+          );
+
+          if (response.data.success) {
+            const reservation = response.data.reservation;
+            toast.success("Reservation details loaded successfully");
+
+            // Format dates for form inputs
+            const formatDate = (dateString) => {
+              if (!dateString) return "";
+              return new Date(dateString).toISOString().split("T")[0];
+            };
+
+            // Map reservation data to booking form fields
+            setFormData((prevData) => ({
+              ...prevData,
+              grcNo: reservation.grcNo || "",
+              bookingRefNo: reservation.bookingRefNo || "",
+              bookingDate: formatDate(reservation.bookingDate),
+              checkInDate: formatDate(reservation.checkInDate),
+              checkOutDate: formatDate(reservation.checkOutDate),
+              timeIn: reservation.checkInTime || "12:00",
+              timeOut: reservation.checkOutTime || "10:00",
+              days:
+                Math.ceil(
+                  (new Date(reservation.checkOutDate) -
+                    new Date(reservation.checkInDate)) /
+                    (1000 * 60 * 60 * 24)
+                ) || 1,
+
+              // Guest Info
+              salutation: reservation.salutation || "Mr",
+              name: reservation.guestName || "",
+              nationality: reservation.nationality || "Indian",
+              address: reservation.address || "",
+              city: reservation.city || "",
+              mobileNo: reservation.mobileNo || "",
+              email: reservation.email || "",
+              phoneNo: reservation.phoneNo || "",
+
+              // Company Info
+              companyName: reservation.companyName || "",
+              companyGSTIN: reservation.companyGSTIN || "",
+
+              // Room Info
+              planPackage: reservation.planPackage || "",
+              noOfAdults: reservation.noOfAdults || 1,
+              noOfChildren: reservation.noOfChildren || 0,
+              rate: reservation.rate || 0,
+
+              // Other Info
+              arrivedFrom: reservation.arrivalFrom || "",
+              purposeOfVisit: reservation.purposeOfVisit || "",
+              remark: reservation.remarks || "",
+              billingInstruction: reservation.billingInstruction || "",
+              paymentMode: reservation.paymentMode || "Cash",
+              discountPercent: reservation.discountPercent || 0,
+              vip: reservation.vip || false,
+            }));
+          }
+        } catch (error) {
+          console.error("Error fetching reservation:", error);
+          setApiError("Failed to load reservation data");
+        } finally {
+          setInitialLoading(false);
+        }
+      };
+
+      fetchReservationData();
+    }
+  }, [reservationId, BACKEND_URL]);
+
   // Fetch booking data if in edit mode
   useEffect(() => {
     if (isEditMode) {
@@ -170,6 +255,43 @@ const NewBooking = () => {
 
     fetchRooms();
   }, [selectedCategory, BACKEND_URL]);
+
+  const capturePhoto = () => {
+    const imageSrc = webcamRef.current.getScreenshot();
+
+    // Convert base64 to blob
+    fetch(imageSrc)
+      .then((res) => res.blob())
+      .then((blob) => {
+        const file = new File(
+          [blob],
+          currentCameraTarget === "front" ? "id_front.jpg" : "id_back.jpg",
+          { type: "image/jpeg" }
+        );
+
+        if (currentCameraTarget === "front") {
+          setFormData({
+            ...formData,
+            idProofImageUrl: imageSrc,
+            idProofImageFile: file,
+          });
+        } else {
+          setFormData({
+            ...formData,
+            idProofImageUrl2: imageSrc,
+            idProofImageFile2: file,
+          });
+        }
+
+        setShowCamera(false);
+      });
+  };
+
+  // Add these functions to handle camera toggling
+  const openCamera = (target) => {
+    setCurrentCameraTarget(target);
+    setShowCamera(true);
+  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -250,6 +372,52 @@ const NewBooking = () => {
       photoUrl: "",
       photoFile: null,
     });
+  };
+
+  const handleGrcChange = async (e) => {
+    const { value } = e.target;
+    setFormData({
+      ...formData,
+      grcNo: value,
+    });
+
+    // Only fetch if GRC number has at least 4 characters
+    if (value.length >= 4) {
+      try {
+        setLoading(true);
+        const response = await axios.get(`${BACKEND_URL}/api/guests/${value}`);
+
+        if (response.data.success) {
+          const guest = response.data.guest;
+
+          // Map guest details to form fields
+          setFormData((prevData) => ({
+            ...prevData,
+            grcNo: value,
+            name: guest.name,
+            salutation: guest.salutation || prevData.salutation,
+            email: guest.contactDetails.email || "",
+            mobileNo: guest.contactDetails.phone || "",
+            phoneNo: guest.contactDetails.phone || "",
+            address: guest.contactDetails.address || "",
+            city: guest.contactDetails.city || "",
+            nationality: guest.nationality || "Indian",
+            age: guest.age || "",
+            gender: guest.gender || "Male",
+            idProofType: guest.identityDetails?.idType || "",
+            idProofNumber: guest.identityDetails?.idNumber || "",
+            idProofImageUrl: guest.identityDetails?.idPhotoFront || "",
+            photoUrl: guest.photoUrl || "",
+            companyName: guest.companyName || "",
+            companyGSTIN: guest.companyGSTIN || "",
+          }));
+        }
+      } catch (error) {
+        console.log("Guest not found or error fetching guest details");
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -520,7 +688,8 @@ const NewBooking = () => {
                 type="text"
                 name="grcNo"
                 value={formData.grcNo}
-                onChange={handleInputChange}
+                placeholder="Have GRC number?"
+                onChange={handleGrcChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
               />
             </div>
@@ -532,6 +701,7 @@ const NewBooking = () => {
                 type="text"
                 name="bookingRefNo"
                 value={formData.bookingRefNo}
+                placeholder="Have booking Ref number?"
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
               />
@@ -913,18 +1083,42 @@ const NewBooking = () => {
                   </button>
                 </div>
               ) : (
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                    <p className="text-xs text-gray-500">Upload front side</p>
-                  </div>
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={handleIdProofImageUpload}
-                  />
-                </label>
+                <div className="flex space-x-2">
+                  <label className="flex-1 flex flex-col items-center justify-center h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                      <p className="text-xs text-gray-500">Upload front side</p>
+                    </div>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleIdProofImageUpload}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => openCamera("front")}
+                    className="w-12 h-32 flex flex-1 items-center justify-center bg-blue-50 border border-blue-300 rounded-lg hover:bg-blue-100"
+                    title="Take photo with camera"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-blue-500"
+                    >
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                      <circle cx="12" cy="13" r="4"></circle>
+                    </svg>
+                  </button>
+                </div>
               )}
             </div>
 
@@ -949,18 +1143,42 @@ const NewBooking = () => {
                   </button>
                 </div>
               ) : (
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                    <p className="text-xs text-gray-500">Upload back side</p>
-                  </div>
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={handleIdProofImage2Upload}
-                  />
-                </label>
+                <div className="flex space-x-2">
+                  <label className="flex-1 flex flex-col items-center justify-center h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                      <p className="text-xs text-gray-500">Upload back side</p>
+                    </div>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleIdProofImage2Upload}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => openCamera("back")}
+                    className="w-12 h-32 flex flex-1 items-center justify-center bg-blue-50 border border-blue-300 rounded-lg hover:bg-blue-100"
+                    title="Take photo with camera"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-blue-500"
+                    >
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                      <circle cx="12" cy="13" r="4"></circle>
+                    </svg>
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -1453,6 +1671,47 @@ const NewBooking = () => {
             )}
           </button>
         </div>
+        {showCamera && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-4 w-full max-w-md">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium">
+                  Take Photo -{" "}
+                  {currentCameraTarget === "front" ? "Front Side" : "Back Side"}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowCamera(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="relative bg-black rounded-lg overflow-hidden">
+                <Webcam
+                  audio={false}
+                  ref={webcamRef}
+                  screenshotFormat="image/jpeg"
+                  videoConstraints={{
+                    facingMode: "environment",
+                  }}
+                  className="w-full"
+                />
+              </div>
+
+              <div className="flex justify-center mt-4">
+                <button
+                  type="button"
+                  onClick={capturePhoto}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                >
+                  Capture Photo
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </form>
     </div>
   );
