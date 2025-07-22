@@ -206,43 +206,85 @@ const NewRoom = () => {
 
             <div className="flex items-center space-x-6">
               <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="status"
-                  name="status"
-                  checked={formData.status}
-                  onChange={handleChange}
-                  className="w-4 h-4 text-secondary focus:ring-secondary border-gray-300 rounded"
-                />
-                <label htmlFor="status" className="ml-2 text-sm text-dark">
+                <div className="relative inline-block w-10 mr-2 align-middle select-none">
+                  <input
+                    type="checkbox"
+                    id="status"
+                    name="status"
+                    checked={formData.status}
+                    onChange={handleChange}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="status"
+                    className={`block overflow-hidden h-6 border border-gray-300 rounded-full cursor-pointer ${
+                      formData.status ? "bg-secondary" : "bg-gray-300"
+                    }`}
+                  >
+                    <span
+                      className={`block h-6 w-6 rounded-full bg-white transform transition-transform duration-200 ease-in ${
+                        formData.status ? "translate-x-4" : "translate-x-0"
+                      }`}
+                    ></span>
+                  </label>
+                </div>
+                <label htmlFor="status" className="text-sm text-dark">
                   Available
                 </label>
               </div>
 
               <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="is_oos"
-                  name="is_oos"
-                  checked={formData.is_oos}
-                  onChange={handleChange}
-                  className="w-4 h-4 text-secondary focus:ring-secondary border-gray-300 rounded"
-                />
-                <label htmlFor="is_oos" className="ml-2 text-sm text-dark">
+                <div className="relative inline-block w-10 mr-2 align-middle select-none">
+                  <input
+                    type="checkbox"
+                    id="is_oos"
+                    name="is_oos"
+                    checked={formData.is_oos}
+                    onChange={handleChange}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="is_oos"
+                    className={`block overflow-hidden h-6 border border-gray-300 rounded-full cursor-pointer ${
+                      formData.is_oos ? "bg-secondary" : "bg-gray-300"
+                    }`}
+                  >
+                    <span
+                      className={`block h-6 w-6 rounded-full bg-white transform transition-transform duration-200 ease-in ${
+                        formData.is_oos ? "translate-x-4" : "translate-x-0"
+                      }`}
+                    ></span>
+                  </label>
+                </div>
+                <label htmlFor="is_oos" className="text-sm text-dark">
                   Out of Service
                 </label>
               </div>
 
               <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="extra_bed"
-                  name="extra_bed"
-                  checked={formData.extra_bed}
-                  onChange={handleChange}
-                  className="w-4 h-4 text-secondary focus:ring-secondary border-gray-300 rounded"
-                />
-                <label htmlFor="extra_bed" className="ml-2 text-sm text-dark">
+                <div className="relative inline-block w-10 mr-2 align-middle select-none">
+                  <input
+                    type="checkbox"
+                    id="extra_bed"
+                    name="extra_bed"
+                    checked={formData.extra_bed}
+                    onChange={handleChange}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="extra_bed"
+                    className={`block overflow-hidden h-6 border border-gray-300 rounded-full cursor-pointer ${
+                      formData.extra_bed ? "bg-secondary" : "bg-gray-300"
+                    }`}
+                  >
+                    <span
+                      className={`block h-6 w-6 rounded-full bg-white transform transition-transform duration-200 ease-in ${
+                        formData.extra_bed ? "translate-x-4" : "translate-x-0"
+                      }`}
+                    ></span>
+                  </label>
+                </div>
+                <label htmlFor="extra_bed" className="text-sm text-dark">
                   Extra Bed
                 </label>
               </div>

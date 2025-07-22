@@ -380,7 +380,7 @@ const NewBooking = () => {
       } else {
         // Create new booking
         response = await axios.post(
-          `${BACKEND_URL}/api/bookings`,
+          `${BACKEND_URL}/api/bookings/book`,
           formDataToSend,
           {
             headers: {
@@ -524,7 +524,18 @@ const NewBooking = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
               />
             </div>
-
+            <div>
+              <label className="block text-sm font-medium text-dark/70 mb-1">
+                Booking Reference No.
+              </label>
+              <input
+                type="text"
+                name="bookingRefNo"
+                value={formData.bookingRefNo}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
+              />
+            </div>
             <div>
               <label className="block text-sm font-medium text-dark/70 mb-1">
                 Booking Date
@@ -1186,19 +1197,6 @@ const NewBooking = () => {
                 />
               </div>
             )}
-
-            <div>
-              <label className="block text-sm font-medium text-dark/70 mb-1">
-                Booking Reference No.
-              </label>
-              <input
-                type="text"
-                name="bookingRefNo"
-                value={formData.bookingRefNo}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
-              />
-            </div>
 
             <div>
               <label className="block text-sm font-medium text-dark/70 mb-1">

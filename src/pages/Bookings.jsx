@@ -1,21 +1,10 @@
 // src/pages/Bookings.jsx
 import React, { useState, useEffect } from "react";
-import {
-  Plus,
-  Search,
-  Eye,
-  Edit,
-  Trash2,
-  Loader,
-  X,
-  Check,
-  Calendar,
-  User,
-  Home,
-  CreditCard,
-} from "lucide-react";
+import axios from "axios";
+import { Plus, Search, Eye, Edit, Trash2, Loader, X } from "lucide-react";
 import BookingDetails from "../components/BookingDetails";
 import { useNavigate } from "react-router-dom";
+import StatusUpdateModal from "../components/StatusUpdateModal";
 
 const BACKEND_URL =
   import.meta.env.BACKEND_URL || "https://havana-backend.vercel.app";
@@ -32,20 +21,26 @@ const Bookings = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [newStatus, setNewStatus] = useState("");
+  const [statusUpdateBooking, setStatusUpdateBooking] = useState(null);
+  const [deleteBookingId, setDeleteBookingId] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchBookings = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${BACKEND_URL}/api/bookings`);
+        const response = await axios.get(`${BACKEND_URL}/api/bookings/all`);
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch bookings");
-        }
-        const data = await response.json();
-        if (data.success) {
-          setBookings(data.bookings);
+        // Check if response has data
+        if (response.data && response.data.success) {
+          setBookings(response.data.bookings || []);
+        } else if (response.data && Array.isArray(response.data)) {
+          // If the API returns an array directly
+          setBookings(response.data);
+        } else {
+          console.error("Unexpected response format:", response.data);
+          setError("Received unexpected data format from server");
         }
       } catch (error) {
         console.error("Error fetching bookings:", error);
@@ -57,12 +52,54 @@ const Bookings = () => {
     fetchBookings();
   }, []);
 
+  useEffect(() => {
+    console.log("Current bookings state:", bookings);
+  }, [bookings]);
+
   const handleEditBooking = (booking) => {
     navigate(`/booking/edit/${booking._id}`);
   };
 
   const handleViewBooking = (booking) => {
     setSelectedBooking(booking);
+  };
+
+  const handleStatusUpdate = (updatedBooking) => {
+    const updatedBookings = bookings.map((booking) =>
+      booking._id === updatedBooking._id ? updatedBooking : booking
+    );
+    setBookings(updatedBookings);
+    setStatusUpdateBooking(null);
+  };
+
+  const handleStatusClick = (booking) => {
+    setStatusUpdateBooking(booking);
+  };
+
+  const handleDeleteClick = (booking) => {
+    setDeleteBookingId(booking._id);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      setLoading(true);
+      await axios.delete(
+        `${BACKEND_URL}/api/bookings/delete/${deleteBookingId}`
+      );
+
+      // Remove the deleted booking from the state
+      setBookings(
+        bookings.filter((booking) => booking._id !== deleteBookingId)
+      );
+      setShowDeleteConfirm(false);
+      setDeleteBookingId(null);
+    } catch (error) {
+      console.error("Error deleting booking:", error);
+      setError("Failed to delete booking. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleUpdateBooking = (updatedBooking) => {
@@ -249,28 +286,32 @@ const Bookings = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`px-2 py-1 text-xs rounded-full ${getStatusColor(
+                        className={`px-2 py-1 text-xs rounded-full cursor-pointer hover:opacity-80 ${getStatusColor(
                           booking.status
                         )}`}
+                        onClick={() => handleStatusClick(booking)}
                       >
                         {booking.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
-                        <button
+                        {/* <button
                           className="text-dark/60 hover:text-dark"
                           onClick={() => handleViewBooking(booking)}
                         >
                           <Eye className="w-4 h-4" />
-                        </button>
+                        </button> */}
                         <button
                           onClick={() => handleEditBooking(booking)}
                           className="text-dark/60 hover:text-dark"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button className="text-red-500 hover:text-red-700">
+                        <button
+                          onClick={() => handleDeleteClick(booking)}
+                          className="text-red-500 hover:text-red-700"
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -299,6 +340,45 @@ const Bookings = () => {
           onClose={() => setSelectedBooking(null)}
           onUpdate={handleUpdateBooking}
         />
+      )}
+      {statusUpdateBooking && (
+        <StatusUpdateModal
+          booking={statusUpdateBooking}
+          onClose={() => setStatusUpdateBooking(null)}
+          onUpdate={handleStatusUpdate}
+        />
+      )}
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-sm mx-4 shadow-xl">
+            <h3 className="text-lg font-semibold text-dark mb-4">
+              Confirm Delete
+            </h3>
+            <p className="mb-6 text-dark/70">
+              Are you sure you want to delete this booking? This action cannot
+              be undone.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-dark/70 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                {loading ? (
+                  <Loader className="w-4 h-4 animate-spin" />
+                ) : (
+                  "Delete"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

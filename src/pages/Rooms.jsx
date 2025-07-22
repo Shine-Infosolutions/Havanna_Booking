@@ -32,55 +32,55 @@ const Rooms = () => {
   const [totalPages, setTotalPages] = useState(0);
 
   useEffect(() => {
-    const fetchRooms = async () => {
-      try {
-        setLoading(true);
-
-        // Build query parameters
-        const params = new URLSearchParams();
-        params.append("page", page);
-        params.append("limit", limit);
-
-        if (searchTerm) {
-          params.append("search", searchTerm);
-        }
-
-        if (categoryFilter) {
-          params.append("category", categoryFilter);
-        }
-
-        if (statusFilter !== "all") {
-          params.append(
-            "status",
-            statusFilter === "available" ? "true" : "false"
-          );
-        }
-
-        const response = await fetch(
-          `${BACKEND_URL}/api/rooms?${params.toString()}`
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch rooms");
-        }
-
-        const data = await response.json();
-
-        if (data.success) {
-          setRooms(data.rooms);
-          setTotal(data.total);
-          setTotalPages(data.totalPages);
-        }
-      } catch (error) {
-        console.error("Error fetching rooms:", error);
-        setError("Failed to load rooms. Please try again later.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchRooms();
   }, [page, limit, searchTerm, categoryFilter, statusFilter]);
+
+  const fetchRooms = async () => {
+    try {
+      setLoading(true);
+
+      // Build query parameters
+      const params = new URLSearchParams();
+      params.append("page", page);
+      params.append("limit", limit);
+
+      if (searchTerm) {
+        params.append("search", searchTerm);
+      }
+
+      if (categoryFilter) {
+        params.append("category", categoryFilter);
+      }
+
+      if (statusFilter !== "all") {
+        params.append(
+          "status",
+          statusFilter === "available" ? "true" : "false"
+        );
+      }
+
+      const response = await fetch(
+        `${BACKEND_URL}/api/rooms?${params.toString()}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch rooms");
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        setRooms(data.rooms);
+        setTotal(data.total);
+        setTotalPages(data.totalPages);
+      }
+    } catch (error) {
+      console.error("Error fetching rooms:", error);
+      setError("Failed to load rooms. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleEditRoom = (room) => {
     setEditingRoom(room);
@@ -252,14 +252,27 @@ const Rooms = () => {
                       <h3 className="text-lg font-semibold text-dark">
                         Room {room.room_number}
                       </h3>
-                      <span className="text-sm text-dark/70">
+                      {/* <span className="text-sm text-dark/70">
                         Floor {room.floor || 1}
+                      </span> */}
+                    </div>
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-sm text-dark/70">Room title:</span>
+                      <span className="font-semibold text-dark">
+                        {room.title}
                       </span>
                     </div>
-
-                    <p className="text-dark/80 text-sm mb-4">
-                      {room.category ? room.category.category : room.title}
-                    </p>
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-sm text-dark/70">Category:</span>
+                      <span className="font-semibold text-dark">
+                        {" "}
+                        {(room.category &&
+                          categories.find(
+                            (cat) => cat._id === room.category._id
+                          )?.category) ||
+                          "Uncategorized"}
+                      </span>
+                    </div>
 
                     <div className="space-y-3">
                       <div className="flex justify-between">
@@ -272,7 +285,11 @@ const Rooms = () => {
                       <div className="flex justify-between">
                         <span className="text-sm text-dark/70">Capacity:</span>
                         <span className="font-medium text-dark">
-                          {room.category ? room.category.maxOccupancy : 2}{" "}
+                          {(room.category &&
+                            categories.find(
+                              (cat) => cat._id === room.category._id
+                            )?.capacity) ||
+                            2}{" "}
                           guests
                         </span>
                       </div>
@@ -342,6 +359,7 @@ const Rooms = () => {
             setEditingRoom(null);
           }}
           onSave={handleSaveRoom}
+          fetchRooms={fetchRooms}
         />
       )}
     </div>

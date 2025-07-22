@@ -1,23 +1,27 @@
 // src/components/CategoryForm.jsx
 import React, { useState, useEffect } from "react";
-import { X, Upload, Check } from "lucide-react";
+import { X, Check } from "lucide-react";
 
-const CategoryForm = ({ onSubmit, onCancel }) => {
+const CategoryForm = ({ onSubmit, onCancel, editCategory = null }) => {
   const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    basePrice: "",
-    maxOccupancy: "",
-    amenities: "",
-    image: null,
+    name: editCategory ? editCategory.category : "",
+    status: editCategory ? editCategory.status : "Active",
   });
   const [isVisible, setIsVisible] = useState(false);
+  const isEditing = !!editCategory;
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
       [name]: value,
+    });
+  };
+
+  const handleToggleChange = () => {
+    setFormData({
+      ...formData,
+      status: formData.status === "Active" ? "Inactive" : "Active",
     });
   };
 
@@ -30,34 +34,18 @@ const CategoryForm = ({ onSubmit, onCancel }) => {
     };
   }, []);
 
-  const handleImageChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const imageUrl = URL.createObjectURL(file);
-      setFormData({
-        ...formData,
-        image: imageUrl,
-      });
-    }
-  };
-
   const handleSubmit = (e) => {
     e.preventDefault();
 
     // Create category object from form data
     const category = {
       name: formData.name,
-      description: formData.description,
-      basePrice: parseFloat(formData.basePrice),
-      maxOccupancy: parseInt(formData.maxOccupancy),
-      amenities: formData.amenities.split(",").map((item) => item.trim()),
-      image:
-        formData.image ||
-        "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&h=200&fit=crop",
+      status: formData.status,
+      id: editCategory?._id || null, // Include ID if editing
     };
 
     // Pass to parent component
-    onSubmit(category);
+    onSubmit(category, isEditing);
   };
 
   const handleClose = () => {
@@ -88,7 +76,9 @@ const CategoryForm = ({ onSubmit, onCancel }) => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-dark">Add New Category</h3>
+          <h3 className="text-lg font-semibold text-dark">
+            {isEditing ? "Edit Category" : "Add New Category"}
+          </h3>{" "}
           <button
             onClick={handleClose}
             className="text-dark/60 hover:text-dark"
@@ -112,98 +102,39 @@ const CategoryForm = ({ onSubmit, onCancel }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-dark/70 mb-1">
-              Description
+            <label className="block text-sm font-medium text-dark/70 mb-2">
+              Status
             </label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
-              rows="3"
-              required
-            ></textarea>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-dark/70 mb-1">
-                Base Price (₹)
-              </label>
-              <input
-                type="number"
-                name="basePrice"
-                value={formData.basePrice}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-dark/70 mb-1">
-                Max Occupancy
-              </label>
-              <input
-                type="number"
-                name="maxOccupancy"
-                value={formData.maxOccupancy}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-dark/70 mb-1">
-              Amenities (comma separated)
-            </label>
-            <input
-              type="text"
-              name="amenities"
-              value={formData.amenities}
-              onChange={handleInputChange}
-              placeholder="WiFi, AC, TV, etc."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-dark/70 mb-1">
-              Image
-            </label>
-            <div className="mt-1 flex items-center">
-              {formData.image ? (
-                <div className="relative w-full h-32 bg-gray-100 rounded-lg overflow-hidden">
-                  <img
-                    src={formData.image}
-                    alt="Preview"
-                    className="w-full h-full object-cover"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, image: null })}
-                    className="absolute top-2 right-2 bg-white/80 p-1 rounded-full text-red-500 hover:bg-white"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <label className="w-full flex flex-col items-center px-4 py-6 bg-white rounded-lg border-2 border-dashed border-gray-300 cursor-pointer hover:bg-gray-50">
-                  <Upload className="w-8 h-8 text-gray-400" />
-                  <span className="mt-2 text-sm text-gray-500">
-                    Click to upload image
-                  </span>
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                  />
+            <div className="flex items-center">
+              <div className="relative inline-block w-10 mr-2 align-middle select-none">
+                <input
+                  type="checkbox"
+                  id="status"
+                  name="status"
+                  checked={formData.status === "Active"}
+                  onChange={handleToggleChange}
+                  className="hidden"
+                />
+                <label
+                  htmlFor="status"
+                  className={`block overflow-hidden h-6 border border-gray-300 rounded-full cursor-pointer ${
+                    formData.status === "Active"
+                      ? "bg-secondary"
+                      : "bg-gray-300"
+                  }`}
+                >
+                  <span
+                    className={`block h-6 w-6 rounded-full bg-white transform transition-transform duration-200 ease-in ${
+                      formData.status === "Active"
+                        ? "translate-x-4"
+                        : "translate-x-0"
+                    }`}
+                  ></span>
                 </label>
-              )}
+              </div>
+              <label htmlFor="status" className="text-sm text-dark">
+                {formData.status}
+              </label>
             </div>
           </div>
 
@@ -220,7 +151,7 @@ const CategoryForm = ({ onSubmit, onCancel }) => {
               className="px-4 py-2 bg-secondary text-dark rounded-lg hover:shadow-md flex items-center"
             >
               <Check className="w-4 h-4 mr-2" />
-              Save Category
+              {isEditing ? "Update Category" : "Save Category"}
             </button>
           </div>
         </form>

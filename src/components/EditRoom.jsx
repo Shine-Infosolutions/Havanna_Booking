@@ -1,9 +1,10 @@
 import React, { useState, useContext } from "react";
 import { AppContext } from "../context/AppContext";
 import { Loader, X } from "lucide-react";
+import axios from "axios";
 
 // Add this component inside your Rooms component
-const EditRoom = ({ room, onClose, onSave }) => {
+const EditRoom = ({ room, onClose, fetchRooms, onSave }) => {
   const { categories, BACKEND_URL } = useContext(AppContext);
   const [formData, setFormData] = useState({
     title: room.title || "",
@@ -31,27 +32,30 @@ const EditRoom = ({ room, onClose, onSave }) => {
     setLoading(true);
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/rooms/${room._id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+      // Create a copy of the form data
+      const updatedData = { ...formData };
 
-      const data = await response.json();
+      // If category is empty string, remove it from the request
+      if (updatedData.category === "") {
+        delete updatedData.category;
+      }
+      const response = await axios.put(
+        `${BACKEND_URL}/api/rooms/${room._id}`,
+        updatedData
+      );
 
-      if (data.success) {
-        onSave(data.room);
+      if (response.data.success) {
+        onSave(response.data.room);
         onClose();
       } else {
-        setError(data.message || "Failed to update room");
+        setError(response.data.message || "Failed to update room");
       }
     } catch (err) {
       setError("An error occurred while updating the room");
       console.error(err);
     } finally {
       setLoading(false);
+      fetchRooms();
     }
   };
 
@@ -153,43 +157,85 @@ const EditRoom = ({ room, onClose, onSave }) => {
 
           <div className="flex flex-wrap gap-4">
             <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="status"
-                name="status"
-                checked={formData.status}
-                onChange={handleChange}
-                className="w-4 h-4 text-secondary focus:ring-secondary border-gray-300 rounded"
-              />
-              <label htmlFor="status" className="ml-2 text-sm text-dark">
+              <div className="relative inline-block w-10 mr-2 align-middle select-none">
+                <input
+                  type="checkbox"
+                  id="status"
+                  name="status"
+                  checked={formData.status}
+                  onChange={handleChange}
+                  className="hidden"
+                />
+                <label
+                  htmlFor="status"
+                  className={`block overflow-hidden h-6 border border-gray-300 rounded-full cursor-pointer ${
+                    formData.status ? "bg-secondary" : "bg-gray-300"
+                  }`}
+                >
+                  <span
+                    className={`block h-6 w-6 rounded-full bg-white transform transition-transform duration-200 ease-in ${
+                      formData.status ? "translate-x-4" : "translate-x-0"
+                    }`}
+                  ></span>
+                </label>
+              </div>
+              <label htmlFor="status" className="text-sm text-dark">
                 Available
               </label>
             </div>
 
             <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="is_oos"
-                name="is_oos"
-                checked={formData.is_oos}
-                onChange={handleChange}
-                className="w-4 h-4 text-secondary focus:ring-secondary border-gray-300 rounded"
-              />
-              <label htmlFor="is_oos" className="ml-2 text-sm text-dark">
+              <div className="relative inline-block w-10 mr-2 align-middle select-none">
+                <input
+                  type="checkbox"
+                  id="is_oos"
+                  name="is_oos"
+                  checked={formData.is_oos}
+                  onChange={handleChange}
+                  className="hidden"
+                />
+                <label
+                  htmlFor="is_oos"
+                  className={`block overflow-hidden h-6 border border-gray-300 rounded-full cursor-pointer ${
+                    formData.is_oos ? "bg-secondary" : "bg-gray-300"
+                  }`}
+                >
+                  <span
+                    className={`block h-6 w-6 rounded-full bg-white transform transition-transform duration-200 ease-in ${
+                      formData.is_oos ? "translate-x-4" : "translate-x-0"
+                    }`}
+                  ></span>
+                </label>
+              </div>
+              <label htmlFor="is_oos" className="text-sm text-dark">
                 Out of Service
               </label>
             </div>
 
             <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="extra_bed"
-                name="extra_bed"
-                checked={formData.extra_bed}
-                onChange={handleChange}
-                className="w-4 h-4 text-secondary focus:ring-secondary border-gray-300 rounded"
-              />
-              <label htmlFor="extra_bed" className="ml-2 text-sm text-dark">
+              <div className="relative inline-block w-10 mr-2 align-middle select-none">
+                <input
+                  type="checkbox"
+                  id="extra_bed"
+                  name="extra_bed"
+                  checked={formData.extra_bed}
+                  onChange={handleChange}
+                  className="hidden"
+                />
+                <label
+                  htmlFor="extra_bed"
+                  className={`block overflow-hidden h-6 border border-gray-300 rounded-full cursor-pointer ${
+                    formData.extra_bed ? "bg-secondary" : "bg-gray-300"
+                  }`}
+                >
+                  <span
+                    className={`block h-6 w-6 rounded-full bg-white transform transition-transform duration-200 ease-in ${
+                      formData.extra_bed ? "translate-x-4" : "translate-x-0"
+                    }`}
+                  ></span>
+                </label>
+              </div>
+              <label htmlFor="extra_bed" className="text-sm text-dark">
                 Extra Bed
               </label>
             </div>

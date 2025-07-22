@@ -6,33 +6,33 @@ import { AppContext } from "../context/AppContext.jsx";
 import CategoryForm from "../components/CategoryForm";
 
 // Default category images based on category name
-const categoryImages = {
-  Standard:
-    "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&h=200&fit=crop",
-  Deluxe:
-    "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400&h=200&fit=crop",
-  Suite:
-    "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=400&h=200&fit=crop",
-  Family:
-    "https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=400&h=200&fit=crop",
-  Presidential:
-    "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=200&fit=crop",
-  default:
-    "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=200&fit=crop",
-};
+// const categoryImages = {
+//   Standard:
+//     "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&h=200&fit=crop",
+//   Deluxe:
+//     "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400&h=200&fit=crop",
+//   Suite:
+//     "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=400&h=200&fit=crop",
+//   Family:
+//     "https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=400&h=200&fit=crop",
+//   Presidential:
+//     "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=200&fit=crop",
+//   default:
+//     "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=200&fit=crop",
+// };
 
 // Get image based on category name
-const getCategoryImage = (categoryName) => {
-  if (!categoryName) return categoryImages.default;
+// const getCategoryImage = (categoryName) => {
+//   if (!categoryName) return categoryImages.default;
 
-  // Check if category name contains any of the keys
-  for (const key in categoryImages) {
-    if (categoryName.toLowerCase().includes(key.toLowerCase())) {
-      return categoryImages[key];
-    }
-  }
-  return categoryImages.default;
-};
+//   // Check if category name contains any of the keys
+//   for (const key in categoryImages) {
+//     if (categoryName.toLowerCase().includes(key.toLowerCase())) {
+//       return categoryImages[key];
+//     }
+//   }
+//   return categoryImages.default;
+// };
 
 const Categories = () => {
   const { categories, categoriesLoading, BACKEND_URL, fetchCategories } =
@@ -40,24 +40,38 @@ const Categories = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
 
-  const handleAddCategory = async (newCategory) => {
+  const handleAddCategory = async (newCategory, isEditing) => {
     try {
       setLoading(true);
 
       // Only send category name and status to the API
       const categoryData = {
         category: newCategory.name,
-        status: true,
+        status: newCategory.status,
       };
 
-      await axios.post(`${BACKEND_URL}/api/room-categories`, categoryData);
+      if (isEditing && newCategory.id) {
+        // Update existing category
+        await axios.put(
+          `${BACKEND_URL}/api/room-categories/${newCategory.id}`,
+          categoryData
+        );
+      } else {
+        // Create new category
+        await axios.post(`${BACKEND_URL}/api/room-categories`, categoryData);
+      }
 
       setShowForm(false);
+      setEditingCategory(null);
       fetchCategories();
     } catch (error) {
-      console.error("Error adding category:", error);
-      setError("Failed to add category");
+      console.error(
+        `Error ${isEditing ? "updating" : "adding"} category:`,
+        error
+      );
+      setError(`Failed to ${isEditing ? "update" : "add"} category`);
     } finally {
       setLoading(false);
     }
@@ -75,6 +89,11 @@ const Categories = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEditCategory = (category) => {
+    setEditingCategory(category);
+    setShowForm(true);
   };
 
   return (
@@ -96,7 +115,11 @@ const Categories = () => {
       {showForm && (
         <CategoryForm
           onSubmit={handleAddCategory}
-          onCancel={() => setShowForm(false)}
+          onCancel={() => {
+            setShowForm(false);
+            setEditingCategory(null);
+          }}
+          editCategory={editingCategory}
         />
       )}
 
@@ -113,8 +136,22 @@ const Categories = () => {
                 key={category._id}
                 className="bg-white/30 hover:bg-white/80 border border-gray-200 backdrop-blur-sm rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all"
               >
+                <div className="relative float-right overflow-hidden">
+                  <button
+                    onClick={() => handleEditCategory(category)}
+                    className="bg-white/80 text-dark p-1.5 rounded-full hover:bg-white"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button
+                    className="bg-white/80 text-red-600 p-1.5 rounded-full hover:bg-white"
+                    onClick={() => handleDeleteCategory(category._id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
                 {/* Image Section */}
-                <div className="h-48 bg-gray-200 relative overflow-hidden">
+                {/* <div className="h-48 bg-gray-200 relative overflow-hidden">
                   <img
                     src={getCategoryImage(category.category)}
                     alt={category.category}
@@ -134,20 +171,27 @@ const Categories = () => {
                       <Trash2 className="w-3 h-3" />
                     </button>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Content Section */}
                 <div className="p-6">
                   <h3 className="text-lg font-semibold text-dark mb-2">
                     {category.category}
                   </h3>
-
-                  <p className="text-dark/70 text-sm mb-4">
-                    {category.description ||
-                      `${category.category} room with standard amenities`}
+                  <p>
+                    {category.status === "Active" ? (
+                      <span className="text-green-600">Active</span>
+                    ) : (
+                      <span className="text-red-600">Inactive</span>
+                    )}
                   </p>
 
-                  <div className="space-y-3">
+                  {/* <p className="text-dark/70 text-sm mb-4">
+                    {category.description ||
+                      `${category.category} room with standard amenities`}
+                  </p> */}
+
+                  {/* <div className="space-y-3">
                     <div className="flex justify-between">
                       <span className="text-sm text-dark/70">Base Price:</span>
                       <span className="font-semibold text-dark">
@@ -179,7 +223,7 @@ const Categories = () => {
                         )}
                       </div>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             ))

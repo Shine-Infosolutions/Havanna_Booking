@@ -23,6 +23,13 @@ const Sidebar = () => {
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: Home, path: "/" },
     { id: "bookings", label: "Bookings", icon: Calendar, path: "/bookings" },
+    {
+      id: "reservations",
+      label: "Reservations",
+      icon: Calendar,
+      path: "/reservations",
+    },
+
     // {
     //   id: "room-management",
     //   label: "Room Management",

@@ -111,7 +111,7 @@ const BookingDetails = ({ booking, onClose, onUpdate }) => {
     <div
       className={`fixed inset-0 bg-black/20 backdrop-blur-xs flex items-center justify-center z-50 transition-all duration-200 ease-out ${
         isVisible ? "bg-opacity-50 backdrop-blur-sm" : "bg-opacity-0"
-      }`}
+      } overflow-y-auto py-6`}
       onClick={handleClose}
     >
       <div

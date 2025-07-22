@@ -19,15 +19,28 @@ const Dashboard = () => {
 
         // Fetch bookings and rooms in parallel
         const [bookingsResponse, roomsResponse] = await Promise.all([
-          axios.get(`${BACKEND_URL}/api/bookings`),
+          axios.get(`${BACKEND_URL}/api/bookings/all`),
           axios.get(`${BACKEND_URL}/api/rooms`),
         ]);
 
-        if (bookingsResponse.data.success) {
-          setBookings(bookingsResponse.data.bookings);
+        if (bookingsResponse.data) {
+          if (
+            bookingsResponse.data.success &&
+            Array.isArray(bookingsResponse.data.bookings)
+          ) {
+            setBookings(bookingsResponse.data.bookings);
+          } else if (Array.isArray(bookingsResponse.data)) {
+            // If API returns array directly
+            setBookings(bookingsResponse.data);
+          } else {
+            console.error(
+              "Unexpected bookings data format:",
+              bookingsResponse.data
+            );
+          }
         }
 
-        if (roomsResponse.data.success) {
+        if (roomsResponse.data && roomsResponse.data.success) {
           setRooms(roomsResponse.data.rooms);
         }
       } catch (error) {
