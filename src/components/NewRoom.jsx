@@ -11,14 +11,14 @@ const NewRoom = () => {
 
   const [formData, setFormData] = useState({
     title: "",
-    room_number: "",
     category: "",
+    room_number: "",
     price: "",
-    floor: "1",
-    status: true,
-    is_oos: false,
     extra_bed: false,
-    photos: [],
+    is_reserved: false,
+    status: "available",
+    description: "",
+    images: [],
   });
 
   const [loading, setLoading] = useState(false);
@@ -118,174 +118,125 @@ const NewRoom = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">
-                Room Title
+              <label className="block text-sm font-medium text-dark/70 mb-1">
+                Room Title*
               </label>
               <input
                 type="text"
                 name="title"
                 value={formData.title}
                 onChange={handleChange}
-                className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
-                placeholder="Deluxe Room"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">
-                Room Number
+              <label className="block text-sm font-medium text-dark/70 mb-1">
+                Room Number*
               </label>
               <input
                 type="text"
                 name="room_number"
                 value={formData.room_number}
                 onChange={handleChange}
-                className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
-                placeholder="101"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">
-                Category
+              <label className="block text-sm font-medium text-dark/70 mb-1">
+                Category*
               </label>
               <select
                 name="category"
                 value={formData.category}
                 onChange={handleChange}
-                className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
                 required
               >
-                <option value="">Select a category</option>
-                {categoriesLoading ? (
-                  <option disabled>Loading categories...</option>
-                ) : (
-                  categories.map((category) => (
-                    <option key={category._id} value={category._id}>
-                      {category.category}
-                    </option>
-                  ))
-                )}
+                <option value="">Select Category</option>
+                {categories.map((cat) => (
+                  <option key={cat._id} value={cat._id}>
+                    {cat.category}
+                  </option>
+                ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">
-                Price per Night (₹)
+              <label className="block text-sm font-medium text-dark/70 mb-1">
+                Price per Night*
               </label>
               <input
                 type="number"
                 name="price"
                 value={formData.price}
                 onChange={handleChange}
-                className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
-                placeholder="1000"
-                min="0"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">
-                Floor
+              <label className="block text-sm font-medium text-dark/70 mb-1">
+                Status
               </label>
-              <input
-                type="number"
-                name="floor"
-                value={formData.floor}
+              <select
+                name="status"
+                value={formData.status}
                 onChange={handleChange}
-                className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
-                placeholder="1"
-                min="0"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
+              >
+                <option value="available">Available</option>
+                <option value="reserved">Reserved</option>
+                <option value="booked">Booked</option>
+                <option value="maintenance">Maintenance</option>
+              </select>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-dark/70 mb-1">
+                Description
+              </label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                rows="3"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
               />
             </div>
 
             <div className="flex items-center space-x-6">
               <div className="flex items-center">
-                <div className="relative inline-block w-10 mr-2 align-middle select-none">
-                  <input
-                    type="checkbox"
-                    id="status"
-                    name="status"
-                    checked={formData.status}
-                    onChange={handleChange}
-                    className="hidden"
-                  />
-                  <label
-                    htmlFor="status"
-                    className={`block overflow-hidden h-6 border border-gray-300 rounded-full cursor-pointer ${
-                      formData.status ? "bg-secondary" : "bg-gray-300"
-                    }`}
-                  >
-                    <span
-                      className={`block h-6 w-6 rounded-full bg-white transform transition-transform duration-200 ease-in ${
-                        formData.status ? "translate-x-4" : "translate-x-0"
-                      }`}
-                    ></span>
-                  </label>
-                </div>
-                <label htmlFor="status" className="text-sm text-dark">
-                  Available
+                <input
+                  type="checkbox"
+                  id="extra_bed"
+                  name="extra_bed"
+                  checked={formData.extra_bed}
+                  onChange={handleChange}
+                  className="w-4 h-4 text-secondary bg-gray-100 border-gray-300 rounded focus:ring-secondary"
+                />
+                <label htmlFor="extra_bed" className="ml-2 text-sm text-dark">
+                  Extra Bed Available
                 </label>
               </div>
 
               <div className="flex items-center">
-                <div className="relative inline-block w-10 mr-2 align-middle select-none">
-                  <input
-                    type="checkbox"
-                    id="is_oos"
-                    name="is_oos"
-                    checked={formData.is_oos}
-                    onChange={handleChange}
-                    className="hidden"
-                  />
-                  <label
-                    htmlFor="is_oos"
-                    className={`block overflow-hidden h-6 border border-gray-300 rounded-full cursor-pointer ${
-                      formData.is_oos ? "bg-secondary" : "bg-gray-300"
-                    }`}
-                  >
-                    <span
-                      className={`block h-6 w-6 rounded-full bg-white transform transition-transform duration-200 ease-in ${
-                        formData.is_oos ? "translate-x-4" : "translate-x-0"
-                      }`}
-                    ></span>
-                  </label>
-                </div>
-                <label htmlFor="is_oos" className="text-sm text-dark">
-                  Out of Service
-                </label>
-              </div>
-
-              <div className="flex items-center">
-                <div className="relative inline-block w-10 mr-2 align-middle select-none">
-                  <input
-                    type="checkbox"
-                    id="extra_bed"
-                    name="extra_bed"
-                    checked={formData.extra_bed}
-                    onChange={handleChange}
-                    className="hidden"
-                  />
-                  <label
-                    htmlFor="extra_bed"
-                    className={`block overflow-hidden h-6 border border-gray-300 rounded-full cursor-pointer ${
-                      formData.extra_bed ? "bg-secondary" : "bg-gray-300"
-                    }`}
-                  >
-                    <span
-                      className={`block h-6 w-6 rounded-full bg-white transform transition-transform duration-200 ease-in ${
-                        formData.extra_bed ? "translate-x-4" : "translate-x-0"
-                      }`}
-                    ></span>
-                  </label>
-                </div>
-                <label htmlFor="extra_bed" className="text-sm text-dark">
-                  Extra Bed
+                <input
+                  type="checkbox"
+                  id="is_reserved"
+                  name="is_reserved"
+                  checked={formData.is_reserved}
+                  onChange={handleChange}
+                  className="w-4 h-4 text-secondary bg-gray-100 border-gray-300 rounded focus:ring-secondary"
+                />
+                <label htmlFor="is_reserved" className="ml-2 text-sm text-dark">
+                  Currently Reserved
                 </label>
               </div>
             </div>

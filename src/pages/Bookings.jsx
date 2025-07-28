@@ -30,7 +30,7 @@ const Bookings = () => {
     const fetchBookings = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${BACKEND_URL}/api/bookings/all`);
+        const response = await axios.get(`${BACKEND_URL}/api/bookings`);
 
         // Check if response has data
         if (response.data && response.data.success) {
@@ -128,20 +128,15 @@ const Bookings = () => {
   const filteredBookings = bookings
     .filter(
       (booking) =>
-        statusFilter === "all" ||
-        booking.status === statusFilter ||
-        booking.status ===
-          statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)
+        statusFilter === "all" || booking.status?.toLowerCase() === statusFilter
     )
     .filter(
       (booking) =>
         searchTerm === "" ||
-        (booking.name || booking.guestName || "")
+        (booking.guestDetails?.name || "")
           .toLowerCase()
           .includes(searchTerm.toLowerCase()) ||
-        (booking.roomNo || booking.roomNumber || "")
-          .toString()
-          .includes(searchTerm)
+        booking.roomNumber?.toString().includes(searchTerm)
     );
 
   return (
@@ -261,38 +256,42 @@ const Bookings = () => {
                   <tr key={booking._id} className="hover:bg-primary/10">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-dark">
-                        {booking.salutation} {booking.name}
+                        {booking.salutation} {booking.guestDetails?.name}
                       </div>
                       <div className="text-xs text-dark/70">
-                        {booking.email}
+                        {booking.contactDetails?.phone || "No phone"}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-dark">
-                        Room {booking.roomNo}
+                        Room {booking.roomNumber}
                       </div>
                       <div className="text-xs text-dark/70">
-                        {booking.planPackage || "Standard"}
+                        {booking.categoryId?.category || "Standard"}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-dark">
-                      {new Date(booking.checkInDate).toLocaleDateString()}
+                      {new Date(
+                        booking.bookingInfo?.checkIn
+                      ).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-dark">
-                      {new Date(booking.checkOutDate).toLocaleDateString()}
+                      {new Date(
+                        booking.bookingInfo?.checkOut
+                      ).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-dark">
-                      ₹{booking.rate * booking.days}
+                      ₹{booking.paymentDetails?.totalAmount || 0}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span
+                      <button
+                        onClick={() => handleStatusClick(booking)}
                         className={`px-2 py-1 text-xs rounded-full cursor-pointer hover:opacity-80 ${getStatusColor(
                           booking.status
                         )}`}
-                        onClick={() => handleStatusClick(booking)}
                       >
                         {booking.status}
-                      </span>
+                      </button>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">

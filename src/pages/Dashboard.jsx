@@ -19,7 +19,7 @@ const Dashboard = () => {
 
         // Fetch bookings and rooms in parallel
         const [bookingsResponse, roomsResponse] = await Promise.all([
-          axios.get(`${BACKEND_URL}/api/bookings/all`),
+          axios.get(`${BACKEND_URL}/api/bookings`),
           axios.get(`${BACKEND_URL}/api/rooms`),
         ]);
 
@@ -56,15 +56,17 @@ const Dashboard = () => {
 
   // Calculate stats
   const totalBookings = bookings.length;
-  const availableRooms = rooms.filter((room) => room.status === true).length;
   const totalRevenue = bookings.reduce(
-    (sum, booking) => sum + (booking.totalAmount || 0),
+    (sum, booking) => sum + (booking.paymentDetails?.totalAmount || 0),
     0
   );
+  const availableRooms = rooms.filter(
+    (room) => room.status === "available"
+  ).length;
   const occupancyRate =
     rooms.length > 0
       ? Math.round(
-          (rooms.filter((room) => room.status === false).length /
+          (rooms.filter((room) => room.status === "booked").length /
             rooms.length) *
             100
         )
@@ -92,6 +94,21 @@ const Dashboard = () => {
       change: "+3%",
     },
   ];
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "Booked":
+        return "bg-green-100 text-green-800";
+      case "Checked In":
+        return "bg-blue-100 text-blue-800";
+      case "Checked Out":
+        return "bg-gray-100 text-gray-800";
+      case "Cancelled":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-yellow-100 text-yellow-800";
+    }
+  };
 
   // Get recent bookings (latest 3)
   const recentBookings = bookings.slice(0, 3);
@@ -169,34 +186,28 @@ const Dashboard = () => {
             recentBookings.map((booking) => (
               <div
                 key={booking._id}
-                className="flex items-center justify-between p-3 bg-primary/50 rounded-lg"
+                className="flex items-center justify-between p-3 hover:bg-primary/5 rounded-lg"
               >
                 <div>
-                  <p className="font-medium text-dark">
-                    {booking.salutation} {booking.name}
-                  </p>
-                  <p className="text-sm text-dark/70">
-                    Room {booking.roomNo || booking.roomNumber} -{" "}
-                    {booking.roomType}
-                  </p>
+                  <div className="font-medium text-dark">
+                    {booking.guestDetails?.name || "N/A"}
+                  </div>
+                  <div className="text-sm text-dark/70">
+                    Room {booking.roomNumber} •{" "}
+                    {booking.categoryId?.category || "Standard"}
+                  </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-dark">
-                    ₹{booking.rate * booking.days}
-                  </p>
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full ${
-                      booking.status === "Booked" ||
-                      booking.status === "confirmed"
-                        ? "bg-green-100 text-green-800"
-                        : booking.status === "Checked In" ||
-                          booking.status === "checked-in"
-                        ? "bg-blue-100 text-blue-800"
-                        : "bg-yellow-100 text-yellow-800"
-                    }`}
+                  <div className="text-sm font-medium text-dark">
+                    ₹{booking.paymentDetails?.totalAmount || 0}
+                  </div>
+                  <div
+                    className={`text-xs px-2 py-1 rounded-full ${getStatusColor(
+                      booking.status
+                    )}`}
                   >
                     {booking.status}
-                  </span>
+                  </div>
                 </div>
               </div>
             ))

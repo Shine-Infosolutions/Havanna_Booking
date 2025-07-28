@@ -97,15 +97,22 @@ const Rooms = () => {
   };
 
   const getRoomStatusColor = (status) => {
-    if (status === true) return "bg-green-100 text-green-800"; // available
-    if (status === false) return "bg-red-100 text-red-800"; // occupied
-    return "bg-yellow-100 text-yellow-800"; // maintenance or other
+    switch (status) {
+      case "available":
+        return "bg-green-100 text-green-800";
+      case "reserved":
+        return "bg-yellow-100 text-yellow-800";
+      case "booked":
+        return "bg-blue-100 text-blue-800";
+      case "maintenance":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
   };
 
   const getRoomStatusText = (status) => {
-    if (status === true) return "available";
-    if (status === false) return "occupied";
-    return "maintenance";
+    return status || "available";
   };
 
   return (
@@ -140,22 +147,24 @@ const Rooms = () => {
 
       {/* Filter Buttons */}
       <div className="flex space-x-2">
-        {["all", "available", "occupied", "maintenance"].map((status) => (
-          <button
-            key={status}
-            onClick={() => {
-              setStatusFilter(status);
-              setPage(1); // Reset to first page on filter change
-            }}
-            className={`px-4 py-2 rounded-lg capitalize transition-colors ${
-              statusFilter === status
-                ? "bg-secondary text-dark font-medium"
-                : "bg-white/50 text-dark/70 hover:bg-secondary/50"
-            }`}
-          >
-            {status}
-          </button>
-        ))}
+        {["all", "available", "reserved", "booked", "maintenance"].map(
+          (status) => (
+            <button
+              key={status}
+              onClick={() => {
+                setStatusFilter(status);
+                setPage(1);
+              }}
+              className={`px-4 py-2 rounded-lg capitalize transition-colors ${
+                statusFilter === status
+                  ? "bg-secondary text-dark font-medium"
+                  : "bg-white/50 text-dark/70 hover:bg-secondary/50"
+              }`}
+            >
+              {status}
+            </button>
+          )
+        )}
       </div>
 
       {categories.length > 0 && (
@@ -213,8 +222,8 @@ const Rooms = () => {
                   <div className="h-48 bg-gray-200 relative overflow-hidden">
                     <img
                       src={
-                        room.photos && room.photos.length > 0
-                          ? room.photos[0]
+                        room.images && room.images.length > 0
+                          ? room.images[0]
                           : null
                       }
                       alt={`Room ${room.room_number}`}
@@ -252,25 +261,19 @@ const Rooms = () => {
                       <h3 className="text-lg font-semibold text-dark">
                         Room {room.room_number}
                       </h3>
-                      {/* <span className="text-sm text-dark/70">
-                        Floor {room.floor || 1}
-                      </span> */}
                     </div>
+
                     <div className="flex items-center justify-between mb-4">
-                      <span className="text-sm text-dark/70">Room title:</span>
+                      <span className="text-sm text-dark/70">Title:</span>
                       <span className="font-semibold text-dark">
                         {room.title}
                       </span>
                     </div>
+
                     <div className="flex items-center justify-between mb-4">
                       <span className="text-sm text-dark/70">Category:</span>
                       <span className="font-semibold text-dark">
-                        {" "}
-                        {(room.category &&
-                          categories.find(
-                            (cat) => cat._id === room.category._id
-                          )?.category) ||
-                          "Uncategorized"}
+                        {room.category?.category || "Uncategorized"}
                       </span>
                     </div>
 
@@ -283,26 +286,71 @@ const Rooms = () => {
                       </div>
 
                       <div className="flex justify-between">
-                        <span className="text-sm text-dark/70">Capacity:</span>
-                        <span className="font-medium text-dark">
-                          {(room.category &&
-                            categories.find(
-                              (cat) => cat._id === room.category._id
-                            )?.capacity) ||
-                            2}{" "}
-                          guests
+                        <span className="text-sm text-dark/70">Extra Bed:</span>
+                        <span
+                          className={`text-sm px-2 py-1 rounded-full ${
+                            room.extra_bed
+                              ? "bg-green-100 text-green-800"
+                              : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {room.extra_bed ? "Available" : "Not Available"}
                         </span>
                       </div>
 
-                      {room.is_oos && (
-                        <div className="mt-2 py-1 px-2 bg-yellow-100 text-yellow-800 text-xs rounded">
-                          Out of Service
+                      {room.reservedFromDate && room.reservedTillDate ? (
+                        <div className="mt-3">
+                          <div className="flex justify-between mb-2">
+                            <span className="text-sm text-dark/70">
+                              Reserved From:
+                            </span>
+                            <span className="text-sm font-medium text-yellow-600">
+                              {new Date(
+                                room.reservedFromDate
+                              ).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-dark/70">
+                              Reserved Till:
+                            </span>
+                            <span className="text-sm font-medium text-yellow-600">
+                              {new Date(
+                                room.reservedTillDate
+                              ).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-dark/70">
+                            Reserved:
+                          </span>
+                          <span className="text-sm px-2 py-1 rounded-full bg-gray-100 text-gray-800">
+                            No
+                          </span>
                         </div>
                       )}
 
-                      {room.extra_bed && (
-                        <div className="mt-2 py-1 px-2 bg-blue-100 text-blue-800 text-xs rounded">
-                          Extra Bed Available
+                      {room.bookedTillDate && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-dark/70">
+                            Booked Till:
+                          </span>
+                          <span className="text-sm font-medium text-red-600">
+                            {new Date(room.bookedTillDate).toLocaleDateString()}
+                          </span>
+                        </div>
+                      )}
+
+                      {room.description && (
+                        <div className="mt-3">
+                          <span className="text-sm text-dark/70">
+                            Description:
+                          </span>
+                          <p className="text-sm text-dark mt-1">
+                            {room.description}
+                          </p>
                         </div>
                       )}
                     </div>

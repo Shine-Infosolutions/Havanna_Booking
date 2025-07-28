@@ -29,28 +29,8 @@ const Sidebar = () => {
       icon: Calendar,
       path: "/reservations",
     },
-
-    // {
-    //   id: "room-management",
-    //   label: "Room Management",
-    //   icon: BedDouble,
-    //   isDropdown: true,
-    //   subItems: [
-    //     { id: "categories", label: "Categories", path: "/room-categories" },
-    //     { id: "rooms", label: "Rooms", path: "/rooms" },
-    //   ],
-    // },
-  ]; // { id: "bookings", label: "Bookings", icon: Calendar, path: "/bookings" },
-  // { id: "room", label: "Rooms", icon: BedDouble, path: "/rooms" },
-  // { id: "guests", label: "Guests", icon: Users, path: "/guests" },
-  // { id: "payments", label: "Payments", icon: CreditCard, path: "/payments" },
-  // {
-  //   id: "analytics",
-  //   label: "Analytics",
-  //   icon: BarChart3,
-  //   path: "/analytics",
-  // },
-  // { id: "settings", label: "Settings", icon: Settings, path: "/settings" },
+    { id: "guests", label: "Guests", icon: Users, path: "/guests" },
+  ];
 
   const roomManagementItems = [
     { id: "categories", label: "Categories", path: "/room-categories" },
@@ -102,15 +82,13 @@ const Sidebar = () => {
 
       {/* Sidebar */}
       <div
-        className={`fixed left-0 top-0 z-40 bg-gradient-to-b from-primary to-[#dac58c] w-64 min-h-screen p-6 transform transition-transform duration-300 ${
+        className={`fixed left-0 top-0 z-40 bg-dark w-64 min-h-screen p-6 transform transition-transform duration-300 ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
         <div className="mb-10">
-          <h2 className="text-2xl font-bold text-red-900">Hotel Havanna</h2>
-          <p className="text-[var(--color-dark)]/70 text-sm">
-            Management System
-          </p>
+          <h2 className="text-2xl font-bold text-white">Hotel Havanna</h2>
+          <p className="text-amber-50 text-sm">Management System</p>
         </div>
 
         <nav className="space-y-2">
@@ -127,7 +105,7 @@ const Sidebar = () => {
                 className={`w-full text-left px-4 py-3 rounded-lg transition-all flex items-center space-x-3 ${
                   isActive(item.path)
                     ? "bg-[var(--color-secondary)] text-[var(--color-dark)] font-medium"
-                    : "text-[var(--color-dark)]/80 hover:bg-[var(--color-secondary)]/50"
+                    : "text-amber-50 hover:bg-[var(--color-secondary)]/50"
                 }`}
               >
                 <Icon className="w-5 h-5" />
@@ -142,8 +120,8 @@ const Sidebar = () => {
               onClick={() => setRoomDropdownOpen(!roomDropdownOpen)}
               className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center justify-between ${
                 isRoomManagementActive()
-                  ? " text-[var(--color-dark)] font-medium"
-                  : "text-[var(--color-dark)]/80 hover:bg-[var(--color-secondary)]/50"
+                  ? " text-amber-50 font-medium"
+                  : "text-amber-50/80 hover:bg-[var(--color-secondary)]/50"
               }`}
             >
               <div className="flex items-center space-x-3">
@@ -170,7 +148,7 @@ const Sidebar = () => {
                     className={`w-full text-left px-4 py-2 rounded-lg transition-all flex items-center space-x-3 ${
                       isActive(item.path)
                         ? "bg-[var(--color-secondary)] text-[var(--color-dark)] font-medium"
-                        : "text-[var(--color-dark)]/70 hover:bg-[var(--color-secondary)]/30"
+                        : "text-amber-50 hover:bg-[var(--color-secondary)]/30"
                     }`}
                   >
                     <Grid3X3 className="w-4 h-4" />

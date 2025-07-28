@@ -15,13 +15,16 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 
 const ReservationForm = () => {
-  const { BACKEND_URL, categories, rooms } = useContext(AppContext);
+  const { BACKEND_URL, categories } = useContext(AppContext);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditMode = !!id;
+  const [rooms, setRooms] = useState([]);
+  const [filteredRooms, setFilteredRooms] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("");
 
   const [activeTab, setActiveTab] = useState("basic");
 
@@ -31,8 +34,9 @@ const ReservationForm = () => {
     reservationType: "Walk-in",
     modeOfReservation: "",
     category: "",
-    bookingDate: new Date().toISOString().split("T")[0],
+    // bookingDate: "",
     status: "Confirmed",
+    linkedCheckInId: null,
 
     // Guest Details
     salutation: "Mr",
@@ -113,6 +117,8 @@ const ReservationForm = () => {
             // Format dates for form inputs
             const formattedData = {
               ...reservation,
+              category: reservation.category?._id || "",
+              roomAssigned: reservation.roomAssigned?._id || "",
               bookingDate: reservation.bookingDate
                 ? new Date(reservation.bookingDate).toISOString().split("T")[0]
                 : "",
@@ -130,6 +136,30 @@ const ReservationForm = () => {
             };
 
             setFormData(formattedData);
+
+            // Set selected category for room filtering
+            if (reservation.category?._id) {
+              setSelectedCategory(reservation.category._id);
+            }
+
+            // Create room data for edit mode
+            if (reservation.roomAssigned) {
+              const editModeRoom = {
+                _id: reservation.roomAssigned._id,
+                room_number: reservation.roomAssigned.room_number,
+                title: reservation.roomAssigned.title,
+                price: reservation.roomAssigned.price,
+              };
+
+              setFilteredRooms([editModeRoom]);
+              setRooms([
+                {
+                  categoryId: reservation.category?._id,
+                  categoryName: reservation.category?.category,
+                  rooms: [editModeRoom],
+                },
+              ]);
+            }
           } else {
             setError("Failed to load reservation data");
           }
@@ -145,31 +175,92 @@ const ReservationForm = () => {
     }
   }, [id, isEditMode, BACKEND_URL]);
 
+  useEffect(() => {
+    const fetchAvailableRooms = async () => {
+      try {
+        setLoading(true);
+
+        // Build query parameters
+        const params = new URLSearchParams();
+        if (formData.checkInDate) {
+          params.append("checkInDate", formData.checkInDate);
+        }
+        if (formData.checkOutDate) {
+          params.append("checkOutDate", formData.checkOutDate);
+        }
+
+        const url = `${BACKEND_URL}/api/rooms/available${
+          params.toString() ? `?${params.toString()}` : ""
+        }`;
+        const response = await axios.get(url);
+
+        if (response.data.success) {
+          setRooms(response.data.availableRooms);
+          // Filter rooms based on selected category
+          if (selectedCategory) {
+            const categoryRooms = response.data.availableRooms.find(
+              (group) => group.categoryId === selectedCategory
+            );
+            setFilteredRooms(categoryRooms ? categoryRooms.rooms : []);
+          } else {
+            // Show all rooms if no category selected
+            const allRooms = response.data.availableRooms.flatMap(
+              (group) => group.rooms
+            );
+            setFilteredRooms(allRooms);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching available rooms:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAvailableRooms();
+  }, [selectedCategory, BACKEND_URL]);
+
+  const handleCategoryChange = (e) => {
+    const categoryId = e.target.value;
+    setSelectedCategory(categoryId);
+
+    // Update form data
+    setFormData((prev) => ({
+      ...prev,
+      category: categoryId,
+      roomAssigned: "", // Reset room selection when category changes
+    }));
+  };
+
   const handleGrcChange = async (e) => {
     const { value } = e.target;
-    setFormData({ ...formData, grcNo: value });
+    setFormData((prev) => ({
+      ...prev,
+      grcNo: value,
+    }));
 
-    if (value.length >= 7) {
+    // Only fetch if GRC number has at least 4 characters
+    if (value.length >= 4) {
       try {
         setLoading(true);
         const response = await axios.get(`${BACKEND_URL}/api/guests/${value}`);
 
         if (response.data.success) {
           const guest = response.data.guest;
-          toast.success("Guest details loaded successfully");
 
-          setFormData((prevData) => ({
-            ...prevData,
+          // Map guest details to reservation form fields
+          setFormData((prev) => ({
+            ...prev,
             grcNo: value,
-            guestName: guest.name,
-            salutation: guest.salutation || prevData.salutation,
-            email: guest.contactDetails.email || "",
-            mobileNo: guest.contactDetails.phone || "",
-            address: guest.contactDetails.address || "",
-            city: guest.contactDetails.city || "",
-            nationality: guest.nationality || "Indian",
-            companyName: guest.companyName || "",
-            companyGSTIN: guest.companyGSTIN || "",
+            bookingRefNo: guest.bookingRefNo || prev.bookingRefNo,
+            salutation: guest.salutation || prev.salutation,
+            guestName: guest.name || prev.guestName,
+            nationality: guest.contactDetails?.country || prev.nationality,
+            city: guest.contactDetails?.city || prev.city,
+            address: guest.contactDetails?.address || prev.address,
+            phoneNo: guest.contactDetails?.phone || prev.phoneNo,
+            mobileNo: guest.contactDetails?.phone || prev.mobileNo,
+            email: guest.contactDetails?.email || prev.email,
           }));
         }
       } catch (error) {
@@ -183,7 +274,16 @@ const ReservationForm = () => {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
 
-    if (name.includes(".")) {
+    if (name === "roomAssigned") {
+      // Find the selected room and set its price as the rate
+      const selectedRoom = filteredRooms.find((room) => room._id === value);
+
+      setFormData({
+        ...formData,
+        roomAssigned: value,
+        rate: selectedRoom ? selectedRoom.price : formData.rate,
+      });
+    } else if (name.includes(".")) {
       // Handle nested properties (e.g., vehicleDetails.vehicleNumber)
       const [parent, child] = name.split(".");
       setFormData({
@@ -238,6 +338,40 @@ const ReservationForm = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const calculateDays = () => {
+    if (formData.checkInDate && formData.checkOutDate) {
+      const checkIn = new Date(formData.checkInDate);
+      const checkOut = new Date(formData.checkOutDate);
+      const days = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+      return days > 0 ? days : 1;
+    }
+    return 1;
+  };
+
+  const calculateSubtotal = () => {
+    const days = calculateDays();
+    const rate = formData.rate || 0;
+    return rate * days * formData.noOfRooms;
+  };
+
+  const calculateDiscount = () => {
+    const subtotal = calculateSubtotal();
+    const discountPercent = formData.discountPercent || 0;
+    return (subtotal * discountPercent) / 100;
+  };
+
+  const calculateTotal = () => {
+    const subtotal = calculateSubtotal();
+    const discount = calculateDiscount();
+    return subtotal - discount;
+  };
+
+  const calculateBalance = () => {
+    const total = calculateTotal();
+    const advance = formData.advancePaid || 0;
+    return total - advance;
   };
 
   if (initialLoading) {
@@ -303,16 +437,7 @@ const ReservationForm = () => {
         >
           Stay Info
         </button>
-        <button
-          className={`py-2 px-4 font-medium ${
-            activeTab === "payment"
-              ? "border-b-2 border-secondary text-dark"
-              : "text-dark/60"
-          }`}
-          onClick={() => setActiveTab("payment")}
-        >
-          Payment
-        </button>
+
         <button
           className={`py-2 px-4 font-medium ${
             activeTab === "vehicle"
@@ -322,6 +447,16 @@ const ReservationForm = () => {
           onClick={() => setActiveTab("vehicle")}
         >
           Vehicle
+        </button>
+        <button
+          className={`py-2 px-4 font-medium ${
+            activeTab === "payment"
+              ? "border-b-2 border-secondary text-dark"
+              : "text-dark/60"
+          }`}
+          onClick={() => setActiveTab("payment")}
+        >
+          Payment
         </button>
       </div>
 
@@ -408,7 +543,7 @@ const ReservationForm = () => {
                   <option value="Cancelled">Cancelled</option>
                 </select>
               </div>
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-dark/70 mb-1">
                   Booking Date
                 </label>
@@ -419,20 +554,34 @@ const ReservationForm = () => {
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                 />
-              </div>
+              </div> */}
               {formData.status === "Cancelled" && (
-                <div className="col-span-3">
-                  <label className="block text-sm font-medium text-dark/70 mb-1">
-                    Cancellation Reason
-                  </label>
-                  <textarea
-                    name="cancellationReason"
-                    value={formData.cancellationReason}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                    rows="2"
-                  ></textarea>
-                </div>
+                <>
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-dark/70 mb-1">
+                      Cancellation Reason
+                    </label>
+                    <textarea
+                      name="cancellationReason"
+                      value={formData.cancellationReason}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      rows="2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-dark/70 mb-1">
+                      Cancelled By
+                    </label>
+                    <input
+                      type="text"
+                      name="cancelledBy"
+                      value={formData.cancelledBy}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    />
+                  </div>
+                </>
               )}
               <div className="flex items-center">
                 <input
@@ -642,7 +791,16 @@ const ReservationForm = () => {
                   type="date"
                   name="checkInDate"
                   value={formData.checkInDate}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    handleChange(e);
+                    // Clear checkout date if it's before the new checkin date
+                    if (
+                      formData.checkOutDate &&
+                      e.target.value >= formData.checkOutDate
+                    ) {
+                      setFormData((prev) => ({ ...prev, checkOutDate: "" }));
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   required
                 />
@@ -659,24 +817,7 @@ const ReservationForm = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-dark/70 mb-1">
-                  Room Category
-                </label>
-                <select
-                  name="category"
-                  value={formData.category}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                >
-                  <option value="">Select Category</option>
-                  {categories.map((cat) => (
-                    <option key={cat._id} value={cat._id}>
-                      {cat.category}
-                    </option>
-                  ))}
-                </select>
-              </div>
+
               <div>
                 <label className="block text-sm font-medium text-dark/70 mb-1">
                   Check-out Date*
@@ -686,6 +827,7 @@ const ReservationForm = () => {
                   name="checkOutDate"
                   value={formData.checkOutDate}
                   onChange={handleChange}
+                  min={formData.checkInDate || undefined}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   required
                 />
@@ -701,6 +843,43 @@ const ReservationForm = () => {
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-dark/70 mb-1">
+                  Room Category
+                </label>
+                <select
+                  name="category"
+                  value={formData.category}
+                  onChange={handleCategoryChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((cat) => (
+                    <option key={cat._id} value={cat._id}>
+                      {cat.category}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-dark/70 mb-1">
+                  Assign Room
+                </label>
+                <select
+                  name="roomAssigned"
+                  value={formData.roomAssigned}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                >
+                  <option value="">Select Room</option>
+                  {filteredRooms.map((room) => (
+                    <option key={room._id} value={room._id}>
+                      Room {room.room_number} - {room.title} (₹{room.price}
+                      /night)
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-dark/70 mb-1">
@@ -742,27 +921,7 @@ const ReservationForm = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-dark/70 mb-1">
-                  Assign Room
-                </label>
-                <select
-                  name="roomAssigned"
-                  value={formData.roomAssigned}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                >
-                  <option value="">Select Room</option>
-                  {rooms &&
-                    rooms
-                      .filter((room) => room.status === true)
-                      .map((room) => (
-                        <option key={room._id} value={room._id}>
-                          {room.room_number} - {room.title}
-                        </option>
-                      ))}
-                </select>
-              </div>
+
               <div>
                 <label className="block text-sm font-medium text-dark/70 mb-1">
                   Number of Rooms
@@ -1008,6 +1167,94 @@ const ReservationForm = () => {
                   </div>
                 </>
               )}
+            </div>
+            {/* Reservation Summary */}
+            <div className="bg-secondary/20 backdrop-blur-sm rounded-xl p-3 mt-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-dark flex items-center mb-4">
+                <CreditCard className="w-5 h-5 mr-2" />
+                Reservation Summary
+              </h3>
+
+              <div className="space-y-3">
+                <div className="flex justify-between items-center py-2 border-b border-dark/10">
+                  <span className="text-dark/70">Room Rate (per night):</span>
+                  <span className="font-medium text-dark">
+                    ₹{formData.rate || 0}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center py-2 border-b border-dark/10">
+                  <span className="text-dark/70">Number of Days:</span>
+                  <span className="font-medium text-dark">
+                    {calculateDays()}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center py-2 border-b border-dark/10">
+                  <span className="text-dark/70">Number of Rooms:</span>
+                  <span className="font-medium text-dark">
+                    {formData.noOfRooms}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center py-2 border-b border-dark/10">
+                  <span className="text-dark/70">Subtotal:</span>
+                  <span className="font-medium text-dark">
+                    ₹{calculateSubtotal()}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center py-2 border-b border-dark/10">
+                  <span className="text-dark/70">
+                    Discount ({formData.discountPercent}%):
+                  </span>
+                  <span className="font-medium text-red-600">
+                    -₹{calculateDiscount()}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center py-2 border-b border-dark/10">
+                  <span className="text-dark/70">Advance Paid:</span>
+                  <span className="font-medium text-green-600">
+                    ₹{formData.advancePaid || 0}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center py-3 border-t-2 border-dark/20">
+                  <span className="text-lg font-semibold text-dark">
+                    Total Amount:
+                  </span>
+                  <span className="text-xl font-bold text-dark">
+                    ₹{calculateTotal()}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-dark/70">Balance Due:</span>
+                  <span
+                    className={`font-medium ${
+                      calculateBalance() > 0 ? "text-red-600" : "text-green-600"
+                    }`}
+                  >
+                    ₹{calculateBalance()}
+                  </span>
+                </div>
+
+                {formData.checkInDate && formData.checkOutDate && (
+                  <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                    <div className="text-sm text-blue-800">
+                      <strong>Stay Duration:</strong> {calculateDays()} night
+                      {calculateDays() > 1 ? "s" : ""}
+                    </div>
+                    <div className="text-sm text-blue-700 mt-1">
+                      Check-in:{" "}
+                      {new Date(formData.checkInDate).toLocaleDateString()} •
+                      Check-out:{" "}
+                      {new Date(formData.checkOutDate).toLocaleDateString()}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

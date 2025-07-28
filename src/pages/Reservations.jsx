@@ -54,7 +54,7 @@ const Reservations = () => {
 
   const handleEditReservation = (reservation) => {
     setSelectedReservation(reservation);
-    setShowForm(true);
+    navigate(`/reservations/edit/${reservation._id}`);
   };
 
   const handleSaveReservation = () => {
@@ -121,6 +121,9 @@ const Reservations = () => {
         >
           <Plus className="w-4 h-4 inline mr-2" />
           New Reservation
+        </button>
+        <button onClick={() => navigate("/available-rooms")}>
+          Check Room Availability
         </button>
       </div>
 
@@ -287,13 +290,13 @@ const Reservations = () => {
       </div>
 
       {/* Reservation Form Modal */}
-      {showForm && (
+      {/* {showForm && (
         <ReservationForm
           onClose={() => setShowForm(false)}
           onSave={handleSaveReservation}
           initialData={selectedReservation}
         />
-      )}
+      )} */}
     </div>
   );
 };

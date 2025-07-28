@@ -8,13 +8,14 @@ const EditRoom = ({ room, onClose, fetchRooms, onSave }) => {
   const { categories, BACKEND_URL } = useContext(AppContext);
   const [formData, setFormData] = useState({
     title: room.title || "",
-    room_number: room.room_number || "",
     category: room.category?._id || "",
+    room_number: room.room_number || "",
     price: room.price || "",
-    floor: room.floor || "1",
-    status: room.status === true,
-    is_oos: room.is_oos || false,
     extra_bed: room.extra_bed || false,
+    is_reserved: room.is_reserved || false,
+    status: room.status || "available",
+    description: room.description || "",
+    images: room.images || [],
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
