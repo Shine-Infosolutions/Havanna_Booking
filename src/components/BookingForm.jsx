@@ -36,6 +36,7 @@ const BookingForm = () => {
   const [showCamera, setShowCamera] = useState(false);
   const [currentCameraTarget, setCurrentCameraTarget] = useState(null); // 'front' or 'back'
   const webcamRef = useRef(null);
+  const [facingMode, setFacingMode] = useState("environment");
   const [formData, setFormData] = useState({
     // Identifiers
     grcNo: "",
@@ -806,50 +807,207 @@ const BookingForm = () => {
         return;
       }
 
-      // Convert files to base64 strings
-      const convertToBase64 = (file) => {
-        return new Promise((resolve) => {
-          if (!file || typeof file === "string") {
-            resolve(file || "");
-            return;
-          }
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.readAsDataURL(file);
-        });
-      };
+      const formDataToSend = new FormData();
 
-      const idPhotoFront = await convertToBase64(
-        formData.identityDetails?.idPhotoFront
+      // Prepare booking data without files
+      const { idProofImageUrl, idProofImageUrl2, photoUrl, ...cleanFormData } =
+        formData;
+      const { identityDetails, guestDetails, ...restData } = cleanFormData;
+      const { idPhotoFront, idPhotoBack, ...restIdentityDetails } =
+        identityDetails;
+      const { photoFile, ...restGuestDetails } = guestDetails;
+
+      // Basic fields
+      formDataToSend.append(
+        "categoryId",
+        selectedCategory || formData.categoryId
       );
-      const idPhotoBack = await convertToBase64(
-        formData.identityDetails?.idPhotoBack
+      formDataToSend.append(
+        "roomRate",
+        selectedRoom?.price || formData.roomRate
+      );
+      formDataToSend.append("vip", formData.vip);
+      formDataToSend.append("isForeignGuest", formData.isForeignGuest);
+
+      // Add other fields
+      if (formData.grcNo) formDataToSend.append("grcNo", formData.grcNo);
+      if (formData.bookingRefNo)
+        formDataToSend.append("bookingRefNo", formData.bookingRefNo);
+      if (formData.reservationId)
+        formDataToSend.append("reservationId", formData.reservationId);
+      if (formData.roomNumber)
+        formDataToSend.append("roomNumber", formData.roomNumber);
+      if (formData.numberOfRooms)
+        formDataToSend.append("numberOfRooms", formData.numberOfRooms);
+      if (formData.status) formDataToSend.append("status", formData.status);
+
+      // Guest Details
+      formDataToSend.append(
+        "guestDetails[salutation]",
+        restGuestDetails.salutation || ""
+      );
+      formDataToSend.append("guestDetails[name]", restGuestDetails.name || "");
+      formDataToSend.append("guestDetails[age]", restGuestDetails.age || "");
+      formDataToSend.append(
+        "guestDetails[gender]",
+        restGuestDetails.gender || ""
       );
 
-      const submissionData = {
-        ...formData,
-        categoryId: selectedRoom?.category?._id || formData.categoryId,
-        roomRate: selectedRoom?.price || formData.roomRate,
-        identityDetails: {
-          ...formData.identityDetails,
-          idPhotoFront,
-          idPhotoBack,
-        },
-        bookingInfo: {
-          ...formData.bookingInfo,
-          checkIn: new Date(formData.bookingInfo.checkIn),
-          checkOut: new Date(formData.bookingInfo.checkOut),
-          actualCheckInTime: formData.bookingInfo.actualCheckInTime,
-          actualCheckOutTime: formData.bookingInfo.actualCheckOutTime,
-        },
-      };
+      // Contact Details
+      formDataToSend.append(
+        "contactDetails[phone]",
+        formData.contactDetails.phone || ""
+      );
+      formDataToSend.append(
+        "contactDetails[email]",
+        formData.contactDetails.email || ""
+      );
+      formDataToSend.append(
+        "contactDetails[address]",
+        formData.contactDetails.address || ""
+      );
+      formDataToSend.append(
+        "contactDetails[city]",
+        formData.contactDetails.city || ""
+      );
+      formDataToSend.append(
+        "contactDetails[state]",
+        formData.contactDetails.state || ""
+      );
+      formDataToSend.append(
+        "contactDetails[country]",
+        formData.contactDetails.country || ""
+      );
+      formDataToSend.append(
+        "contactDetails[pinCode]",
+        formData.contactDetails.pinCode || ""
+      );
+
+      // Identity Details
+      formDataToSend.append(
+        "identityDetails[idType]",
+        restIdentityDetails.idType || ""
+      );
+      formDataToSend.append(
+        "identityDetails[idNumber]",
+        restIdentityDetails.idNumber || ""
+      );
+
+      // Booking Info
+      formDataToSend.append(
+        "bookingInfo[checkIn]",
+        formData.bookingInfo.checkIn || ""
+      );
+      formDataToSend.append(
+        "bookingInfo[checkOut]",
+        formData.bookingInfo.checkOut || ""
+      );
+      formDataToSend.append(
+        "bookingInfo[actualCheckInTime]",
+        formData.bookingInfo.actualCheckInTime || ""
+      );
+      formDataToSend.append(
+        "bookingInfo[actualCheckOutTime]",
+        formData.bookingInfo.actualCheckOutTime || ""
+      );
+      formDataToSend.append(
+        "bookingInfo[arrivalFrom]",
+        formData.bookingInfo.arrivalFrom || ""
+      );
+      formDataToSend.append(
+        "bookingInfo[bookingType]",
+        formData.bookingInfo.bookingType || ""
+      );
+      formDataToSend.append(
+        "bookingInfo[purposeOfVisit]",
+        formData.bookingInfo.purposeOfVisit || ""
+      );
+      formDataToSend.append(
+        "bookingInfo[remarks]",
+        formData.bookingInfo.remarks || ""
+      );
+      formDataToSend.append(
+        "bookingInfo[adults]",
+        formData.bookingInfo.adults || ""
+      );
+      formDataToSend.append(
+        "bookingInfo[children]",
+        formData.bookingInfo.children || ""
+      );
+
+      // Payment Details
+      formDataToSend.append(
+        "paymentDetails[totalAmount]",
+        formData.paymentDetails.totalAmount || ""
+      );
+      formDataToSend.append(
+        "paymentDetails[advancePaid]",
+        formData.paymentDetails.advancePaid || ""
+      );
+      formDataToSend.append(
+        "paymentDetails[paymentMode]",
+        formData.paymentDetails.paymentMode || ""
+      );
+      formDataToSend.append(
+        "paymentDetails[billingName]",
+        formData.paymentDetails.billingName || ""
+      );
+      formDataToSend.append(
+        "paymentDetails[billingAddress]",
+        formData.paymentDetails.billingAddress || ""
+      );
+      formDataToSend.append(
+        "paymentDetails[gstNumber]",
+        formData.paymentDetails.gstNumber || ""
+      );
+      formDataToSend.append(
+        "paymentDetails[discountPercent]",
+        formData.paymentDetails.discountPercent || ""
+      );
+
+      // Vehicle Details
+      formDataToSend.append(
+        "vehicleDetails[vehicleNumber]",
+        formData.vehicleDetails.vehicleNumber || ""
+      );
+      formDataToSend.append(
+        "vehicleDetails[vehicleType]",
+        formData.vehicleDetails.vehicleType || ""
+      );
+      formDataToSend.append(
+        "vehicleDetails[vehicleModel]",
+        formData.vehicleDetails.vehicleModel || ""
+      );
+      formDataToSend.append(
+        "vehicleDetails[driverName]",
+        formData.vehicleDetails.driverName || ""
+      );
+      formDataToSend.append(
+        "vehicleDetails[driverMobile]",
+        formData.vehicleDetails.driverMobile || ""
+      );
+
+      // Add files
+      if (idPhotoFront && typeof idPhotoFront !== "string") {
+        formDataToSend.append("idPhotoFront", idPhotoFront);
+      }
+      if (idPhotoBack && typeof idPhotoBack !== "string") {
+        formDataToSend.append("idPhotoBack", idPhotoBack);
+      }
+      if (photoFile) {
+        formDataToSend.append("guestPhoto", photoFile);
+      }
 
       const url = isEditMode
         ? `${BACKEND_URL}/api/bookings/update/${id}`
         : `${BACKEND_URL}/api/bookings/book`;
 
       const method = isEditMode ? "put" : "post";
-      const response = await axios[method](url, submissionData);
+      const response = await axios[method](url, formDataToSend, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       if (response.data.success) {
         navigate("/bookings");
@@ -872,6 +1030,10 @@ const BookingForm = () => {
       return days > 0 ? days : 1;
     }
     return 1;
+  };
+
+  const switchCamera = () => {
+    setFacingMode((prev) => (prev === "environment" ? "user" : "environment"));
   };
 
   const getBaseRate = () => {
@@ -1868,7 +2030,7 @@ const BookingForm = () => {
                   ref={webcamRef}
                   screenshotFormat="image/jpeg"
                   videoConstraints={{
-                    facingMode: "environment",
+                    facingMode: facingMode,
                     width: { ideal: 1280 },
                     height: { ideal: 720 },
                   }}
@@ -1881,7 +2043,27 @@ const BookingForm = () => {
                 />
               </div>
 
-              <div className="flex justify-center mt-4">
+              <div className="flex justify-center space-x-3 mt-4">
+                <button
+                  type="button"
+                  onClick={switchCamera}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 flex items-center"
+                >
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                  Switch Camera
+                </button>
                 <button
                   type="button"
                   onClick={capturePhoto}

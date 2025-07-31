@@ -202,11 +202,11 @@ const Dashboard = () => {
 
       case "Monthly Revenue":
         return (
-          <div className="bg-white/20 backdrop-blur-lg rounded-xl p-6 sm:my-2 my-25 shadow-sm">
+          <div className="bg-white/20 backdrop-blur-lg rounded-xl p-4 sm:p-6 shadow-sm">
             <h3 className="text-lg font-semibold text-dark mb-4">
               Revenue Charts
             </h3>
-            <div className="h-64 flex items-center justify-center text-dark/70">
+            <div className="w-full">
               <RevenueCharts bookings={bookings} />
             </div>
           </div>

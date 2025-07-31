@@ -130,6 +130,7 @@ const RevenueCharts = ({ bookings }) => {
 
   const chartOptions = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         position: "top",
@@ -154,14 +155,14 @@ const RevenueCharts = ({ bookings }) => {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-dark flex items-center">
-            <TrendingUp className="w-5 h-5 mr-2" />
+    <div className="w-full space-y-4 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-4">
+      <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 sm:p-4 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+          <h3 className="text-base sm:text-lg font-semibold text-dark flex items-center">
+            <TrendingUp className="w-4 h-4 mr-2" />
             Revenue Chart
           </h3>
-          <div className="flex space-x-2">
+          <div className="flex space-x-1 sm:space-x-2">
             {["weekly", "monthly", "yearly"].map((period) => (
               <button
                 key={period}
@@ -177,12 +178,18 @@ const RevenueCharts = ({ bookings }) => {
             ))}
           </div>
         </div>
-        <Bar data={barChartData} options={chartOptions} />
+        <div className="h-48 sm:h-64 w-full">
+          <Bar data={barChartData} options={chartOptions} />
+        </div>
       </div>
 
-      <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm">
-        <h3 className="text-lg font-semibold text-dark mb-4">Revenue Trend</h3>
-        <Line data={lineChartData} options={chartOptions} />
+      <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 sm:p-6 shadow-sm">
+        <h3 className="text-base sm:text-lg font-semibold text-dark mb-4">
+          Revenue Trend
+        </h3>
+        <div className="h-48 sm:h-64 w-full">
+          <Line data={lineChartData} options={chartOptions} />
+        </div>
       </div>
     </div>
   );
