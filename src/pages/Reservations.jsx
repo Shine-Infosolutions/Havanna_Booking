@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { AppContext } from "../context/AppContext";
 import axios from "axios";
 import ReservationForm from "../components/ReservationForm";
+import StatusUpdateModal from "../components/StatusUpdateModal";
 
 const Reservations = () => {
   const { BACKEND_URL } = useContext(AppContext);
@@ -23,6 +24,7 @@ const Reservations = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [showForm, setShowForm] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState(null);
+  const [showStatusModal, setShowStatusModal] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -82,6 +84,22 @@ const Reservations = () => {
     navigate("/booking/new", { state: { reservationId } });
   };
 
+  const handleStatusClick = (reservation) => {
+    setSelectedReservation(reservation);
+    setShowStatusModal(true);
+  };
+
+  const handleStatusUpdate = (updatedReservation) => {
+    // Update the reservation in the list
+    setReservations((prev) =>
+      prev.map((res) =>
+        res._id === updatedReservation._id
+          ? { ...res, status: updatedReservation.status }
+          : res
+      )
+    );
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case "Confirmed":
@@ -112,9 +130,12 @@ const Reservations = () => {
     );
 
   return (
-    <div className="p-6 space-y-6 min-h-screen">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-dark">Reservations</h2>
+    <div className="p-4 sm:p-6 space-y-6 min-h-screen">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h2 className="text-2xl sm:text-2xl font-bold text-dark ml-12">
+          Reservations
+        </h2>
         <button
           onClick={() => navigate("/reservations/new")}
           className="bg-secondary text-dark px-4 py-2 rounded-lg hover:shadow-lg transition-shadow font-medium"
@@ -174,6 +195,9 @@ const Reservations = () => {
                   Guest
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-dark uppercase tracking-wider">
+                  Room No.
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-dark uppercase tracking-wider">
                   Check-in
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-dark uppercase tracking-wider">
@@ -221,6 +245,14 @@ const Reservations = () => {
                         {reservation.mobileNo || "No phone"}
                       </div>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-dark">
+                        {reservation.roomAssigned.room_number}
+                      </div>
+                      <div className="text-xs text-dark/70">
+                        {reservation.roomAssigned.title}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-dark">
                       {new Date(reservation.checkInDate).toLocaleDateString()}
                       <div className="text-xs text-dark/70">
@@ -236,7 +268,10 @@ const Reservations = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-dark">
                       ₹{reservation.rate}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td
+                      onClick={() => handleStatusClick(reservation)}
+                      className="px-6 py-4 whitespace-nowrap cursor-pointer"
+                    >
                       <span
                         className={`px-2 py-1 text-xs rounded-full ${getStatusColor(
                           reservation.status
@@ -288,6 +323,15 @@ const Reservations = () => {
           </table>
         </div>
       </div>
+
+      {showStatusModal && selectedReservation && (
+        <StatusUpdateModal
+          booking={selectedReservation}
+          onClose={() => setShowStatusModal(false)}
+          onUpdate={handleStatusUpdate}
+          type="reservation"
+        />
+      )}
 
       {/* Reservation Form Modal */}
       {/* {showForm && (

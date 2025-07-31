@@ -116,9 +116,12 @@ const Rooms = () => {
   };
 
   return (
-    <div className="p-6 space-y-6 min-h-screen">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-dark">Rooms</h2>
+    <div className="p-4 sm:p-6 space-y-6 min-h-screen">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h2 className="text-2xl sm:text-2xl font-bold text-dark ml-12">
+          Rooms
+        </h2>
         <button
           onClick={() => navigate("/rooms/new")}
           className="bg-secondary text-dark px-4 py-2 rounded-lg hover:shadow-lg transition-shadow font-medium"

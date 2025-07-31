@@ -181,7 +181,7 @@ const AvailableRooms = () => {
   const availableRooms = getAvailableRooms();
 
   return (
-    <div className="p-6 min-h-screen">
+    <div className="p-4 sm:p-6 space-y-6 min-h-screen">
       <style jsx>{`
         .react-calendar {
           border: none !important;
@@ -206,7 +206,9 @@ const AvailableRooms = () => {
       `}</style>
 
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-dark mb-2">Room Availability</h1>
+        <h2 className="text-2xl sm:text-2xl font-bold mb-2 text-dark ml-12">
+          Room Availability
+        </h2>
         <p className="text-dark/70">
           Check room availability for a specific date
         </p>

@@ -30,6 +30,12 @@ const Sidebar = () => {
       path: "/reservations",
     },
     { id: "guests", label: "Guests", icon: Users, path: "/guests" },
+    {
+      id: "roomAvailablity",
+      label: "Room Availability",
+      icon: Users,
+      path: "/rooms-available",
+    },
   ];
 
   const roomManagementItems = [
@@ -86,7 +92,7 @@ const Sidebar = () => {
           isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
-        <div className="mb-10">
+        <div className="my-10">
           <h2 className="text-2xl font-bold text-white">Hotel Havanna</h2>
           <p className="text-amber-50 text-sm">Management System</p>
         </div>

@@ -3,6 +3,7 @@ import { Plus, BarChart3, Loader } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "../context/AppContext";
 import axios from "axios";
+import RevenueCharts from "../components/RevenueCharts";
 
 const Dashboard = () => {
   const { BACKEND_URL } = useContext(AppContext);
@@ -10,6 +11,7 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [rooms, setRooms] = useState([]);
+  const [activeCard, setActiveCard] = useState("Total Bookings");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -60,9 +62,10 @@ const Dashboard = () => {
     (sum, booking) => sum + (booking.paymentDetails?.totalAmount || 0),
     0
   );
-  const availableRooms = rooms.filter(
+  const availableRoomsData = rooms.filter(
     (room) => room.status === "available"
-  ).length;
+  );
+
   const occupancyRate =
     rooms.length > 0
       ? Math.round(
@@ -80,7 +83,7 @@ const Dashboard = () => {
     },
     {
       title: "Available Rooms",
-      value: availableRooms.toString(),
+      value: availableRoomsData.length.toString(),
       change: "-5%",
     },
     {
@@ -113,6 +116,137 @@ const Dashboard = () => {
   // Get recent bookings (latest 3)
   const recentBookings = bookings.slice(0, 3);
 
+  const renderDetailSection = () => {
+    switch (activeCard) {
+      case "Total Bookings":
+        return (
+          <div className="bg-white/20 backdrop-blur-lg rounded-xl sm:p-6 shadow-sm">
+            <h3 className="text-base sm:text-lg font-semibold text-dark mb-4">
+              Recent Bookings
+            </h3>
+            <div className="space-y-3 max-h-64 sm:max-h-96 overflow-y-auto">
+              {recentBookings.length > 0 ? (
+                recentBookings.map((booking) => (
+                  <div
+                    key={booking._id}
+                    className="flex items-center justify-between p-3 hover:bg-primary/5 rounded-lg"
+                  >
+                    <div>
+                      <div className="font-medium text-dark">
+                        {booking.guestDetails?.name || "N/A"}
+                      </div>
+                      <div className="text-sm text-dark/70">
+                        Room {booking.roomNumber} •{" "}
+                        {booking.categoryId?.category || "Standard"}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-medium text-dark">
+                        ₹{booking.paymentDetails?.totalAmount || 0}
+                      </div>
+                      <div
+                        className={`text-xs px-2 py-1 rounded-full ${getStatusColor(
+                          booking.status
+                        )}`}
+                      >
+                        {booking.status}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-dark/70">No recent bookings</p>
+              )}
+            </div>
+          </div>
+        );
+
+      case "Available Rooms":
+        return (
+          <div className="bg-white/20 backdrop-blur-lg rounded-xl p-6 shadow-sm overflow-y-auto">
+            <h3 className="text-lg font-semibold text-dark mb-4 ">
+              Available Rooms
+            </h3>
+            <div className="space-y-3">
+              {availableRoomsData.length > 0 ? (
+                availableRoomsData.map((room) => (
+                  <div
+                    key={room._id}
+                    className="flex items-center justify-between p-3 hover:bg-primary/5 rounded-lg"
+                  >
+                    <div>
+                      <div className="font-medium text-dark">
+                        Room {room.room_number}
+                      </div>
+                      <div className="text-sm text-dark/70">
+                        {room.category?.category || "Standard"} • Floor{" "}
+                        {room.floor}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-medium text-dark">
+                        ₹{room.price || 0}/night
+                      </div>
+                      <div className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">
+                        Available
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-dark/70">No available rooms</p>
+              )}
+            </div>
+          </div>
+        );
+
+      case "Monthly Revenue":
+        return (
+          <div className="bg-white/20 backdrop-blur-lg rounded-xl p-6 sm:my-2 my-25 shadow-sm">
+            <h3 className="text-lg font-semibold text-dark mb-4">
+              Revenue Charts
+            </h3>
+            <div className="h-64 flex items-center justify-center text-dark/70">
+              <RevenueCharts bookings={bookings} />
+            </div>
+          </div>
+        );
+
+      default:
+        return (
+          <div className="bg-white/20 backdrop-blur-lg rounded-xl p-6 shadow-sm">
+            <h3 className="text-lg font-semibold text-dark mb-4">
+              Occupancy Details
+            </h3>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center p-3 hover:bg-primary/5 rounded-lg">
+                <span className="text-dark">Total Rooms</span>
+                <span className="font-medium text-dark">{rooms.length}</span>
+              </div>
+              <div className="flex justify-between items-center p-3 hover:bg-primary/5 rounded-lg">
+                <span className="text-dark">Available Rooms</span>
+                <span className="font-medium text-dark">
+                  {availableRoomsData.length}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 hover:bg-primary/5 rounded-lg">
+                <span className="text-dark">Occupied Rooms</span>
+                <span className="font-medium text-dark">
+                  {rooms.filter((room) => room.status === "booked").length}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 hover:bg-primary/5 rounded-lg">
+                <span className="text-dark">Reserved Rooms</span>
+                <span className="font-medium text-dark">
+                  {rooms.filter((room) => room.status === "reserved").length}
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center h-screen">
@@ -123,20 +257,23 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="p-6 space-y-6 h-screen">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-dark">Dashboard</h2>
-        <div className="space-x-4">
+    <div className="p-4 sm:p-6 space-y-6 min-h-screen">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h2 className="text-2xl sm:text-2xl font-bold text-dark ml-12">
+          Dashboard
+        </h2>
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
           <button
             onClick={() => navigate("/reservations/new")}
-            className="bg-secondary text-dark px-4 py-2 rounded-lg hover:shadow-lg transition-shadow font-medium"
+            className="bg-secondary text-dark px-3 sm:px-4 py-2 rounded-lg hover:shadow-lg transition-shadow font-medium text-sm sm:text-base"
           >
             <Plus className="w-4 h-4 inline mr-2" />
             New Reservation
           </button>
           <button
             onClick={() => navigate("/booking/new")}
-            className="bg-secondary text-dark px-4 py-2 rounded-lg hover:shadow-lg transition-shadow font-medium"
+            className="bg-secondary text-dark px-3 sm:px-4 py-2 rounded-lg hover:shadow-lg transition-shadow font-medium text-sm sm:text-base"
           >
             <Plus className="w-4 h-4 inline mr-2" />
             New Booking
@@ -150,11 +287,16 @@ const Dashboard = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {stats.map((stat, index) => (
           <div
             key={index}
-            className="bg-primary/50 hover:bg-primary backdrop-blur-sm rounded-xl p-6 shadow-md transition-colors duration-400"
+            onClick={() => setActiveCard(stat.title)}
+            className={`cursor-pointer backdrop-blur-sm rounded-xl p-6 shadow-md ${
+              activeCard === stat.title
+                ? "bg-primary border-2 border-secondary"
+                : "bg-primary/50 hover:bg-primary"
+            }`}
           >
             <div className="flex items-center justify-between">
               <div>
@@ -177,45 +319,7 @@ const Dashboard = () => {
         ))}
       </div>
 
-      <div className="bg-white/20 backdrop-blur-lg rounded-xl p-6 shadow-sm">
-        <h3 className="text-lg font-semibold text-dark mb-4">
-          Recent Bookings
-        </h3>
-        <div className="space-y-3">
-          {recentBookings.length > 0 ? (
-            recentBookings.map((booking) => (
-              <div
-                key={booking._id}
-                className="flex items-center justify-between p-3 hover:bg-primary/5 rounded-lg"
-              >
-                <div>
-                  <div className="font-medium text-dark">
-                    {booking.guestDetails?.name || "N/A"}
-                  </div>
-                  <div className="text-sm text-dark/70">
-                    Room {booking.roomNumber} •{" "}
-                    {booking.categoryId?.category || "Standard"}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-medium text-dark">
-                    ₹{booking.paymentDetails?.totalAmount || 0}
-                  </div>
-                  <div
-                    className={`text-xs px-2 py-1 rounded-full ${getStatusColor(
-                      booking.status
-                    )}`}
-                  >
-                    {booking.status}
-                  </div>
-                </div>
-              </div>
-            ))
-          ) : (
-            <p className="text-center text-dark/70">No recent bookings</p>
-          )}
-        </div>
-      </div>
+      {renderDetailSection()}
     </div>
   );
 };

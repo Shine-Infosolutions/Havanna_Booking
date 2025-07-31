@@ -46,7 +46,7 @@ const App = () => {
               element={<ReservationForm />}
             />
             <Route path="/guests" element={<Guests />} />
-            <Route path="/available-rooms" element={<AvailableRooms />} />
+            <Route path="/rooms-available" element={<AvailableRooms />} />
           </Routes>
         </main>
       </div>

@@ -140,10 +140,10 @@ const Bookings = () => {
     );
 
   return (
-    <div className="p-6 space-y-6  min-h-screen">
+    <div className="p-4 sm:p-6 space-y-6  min-h-screen">
       <div className="flex items-center justify-between">
         <div className="flex items-center">
-          <h2 className="text-2xl font-bold text-dark">Bookings</h2>
+          <h2 className="text-2xl font-bold text-dark ml-12 mb-2">Bookings</h2>
           {/* <button
             onClick={() => setShowHelp(!showHelp)}
             className="ml-2 text-dark/60 hover:text-dark"

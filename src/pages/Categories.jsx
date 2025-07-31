@@ -97,9 +97,10 @@ const Categories = () => {
   };
 
   return (
-    <div className="p-6 space-y-6  min-h-screen">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-[var(--color-dark)]">
+    <div className="p-4 sm:p-6 space-y-6 min-h-screen">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h2 className="text-2xl sm:text-2xl font-bold text-dark ml-12">
           Room Categories
         </h2>
         <button

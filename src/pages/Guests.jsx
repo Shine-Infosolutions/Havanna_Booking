@@ -62,9 +62,12 @@ const Guests = () => {
   };
 
   return (
-    <div className="p-6 space-y-6 min-h-screen">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-dark">Guests ({total})</h2>
+    <div className="p-4 sm:p-6 space-y-6 min-h-screen">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h2 className="text-2xl sm:text-2xl font-bold text-dark ml-12">
+          Guests ({total})
+        </h2>
       </div>
 
       {error && <div className="text-red-500 text-sm">{error}</div>}

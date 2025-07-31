@@ -81,7 +81,7 @@ const BookingForm = () => {
 
     // Booking Info
     bookingInfo: {
-      checkIn: new Date().toISOString().split("T")[0],
+      checkIn: "",
       checkOut: "",
       actualCheckInTime: "12:00",
       actualCheckOutTime: "10:00",
@@ -404,9 +404,14 @@ const BookingForm = () => {
           params.append("checkInDate", formData.bookingInfo.checkIn);
         }
 
+        if (formData.bookingInfo.checkOut) {
+          params.append("checkOutDate", formData.bookingInfo.checkOut);
+        }
+
         const url = `${BACKEND_URL}/api/rooms/available${
           params.toString() ? `?${params.toString()}` : ""
         }`;
+
         const response = await axios.get(url);
 
         if (response.data.success) {
@@ -453,10 +458,21 @@ const BookingForm = () => {
       }
     };
 
-    if (!isEditMode) {
+    // Only fetch if NOT in edit mode AND both dates are present
+    if (
+      !isEditMode &&
+      formData.bookingInfo.checkIn &&
+      formData.bookingInfo.checkOut
+    ) {
       fetchAvailableRooms();
     }
-  }, [selectedCategory, formData.bookingInfo.checkIn, BACKEND_URL, isEditMode]);
+  }, [
+    selectedCategory,
+    formData.bookingInfo.checkIn,
+    formData.bookingInfo.checkOut,
+    BACKEND_URL,
+    isEditMode,
+  ]);
 
   const capturePhoto = () => {
     const imageSrc = webcamRef.current.getScreenshot();

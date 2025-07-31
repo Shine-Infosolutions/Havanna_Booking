@@ -25,6 +25,7 @@ const ReservationForm = () => {
   const [rooms, setRooms] = useState([]);
   const [filteredRooms, setFilteredRooms] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [assignedRoom, setAssignedRoom] = useState(null);
 
   const [activeTab, setActiveTab] = useState("basic");
 
@@ -142,23 +143,14 @@ const ReservationForm = () => {
               setSelectedCategory(reservation.category._id);
             }
 
-            // Create room data for edit mode
+            // Store assigned room separately for edit mode
             if (reservation.roomAssigned) {
-              const editModeRoom = {
+              setAssignedRoom({
                 _id: reservation.roomAssigned._id,
                 room_number: reservation.roomAssigned.room_number,
                 title: reservation.roomAssigned.title,
                 price: reservation.roomAssigned.price,
-              };
-
-              setFilteredRooms([editModeRoom]);
-              setRooms([
-                {
-                  categoryId: reservation.category?._id,
-                  categoryName: reservation.category?.category,
-                  rooms: [editModeRoom],
-                },
-              ]);
+              });
             }
           } else {
             setError("Failed to load reservation data");
@@ -192,23 +184,37 @@ const ReservationForm = () => {
         const url = `${BACKEND_URL}/api/rooms/available${
           params.toString() ? `?${params.toString()}` : ""
         }`;
+
         const response = await axios.get(url);
 
         if (response.data.success) {
           setRooms(response.data.availableRooms);
+
           // Filter rooms based on selected category
+          let categoryRooms = [];
           if (selectedCategory) {
-            const categoryRooms = response.data.availableRooms.find(
+            const categoryGroup = response.data.availableRooms.find(
               (group) => group.categoryId === selectedCategory
             );
-            setFilteredRooms(categoryRooms ? categoryRooms.rooms : []);
+            categoryRooms = categoryGroup ? categoryGroup.rooms : [];
           } else {
             // Show all rooms if no category selected
-            const allRooms = response.data.availableRooms.flatMap(
+            categoryRooms = response.data.availableRooms.flatMap(
               (group) => group.rooms
             );
-            setFilteredRooms(allRooms);
           }
+
+          // In edit mode, add the assigned room to the list if it's not already there
+          if (isEditMode && assignedRoom) {
+            const roomExists = categoryRooms.find(
+              (room) => room._id === assignedRoom._id
+            );
+            if (!roomExists) {
+              categoryRooms.unshift(assignedRoom);
+            }
+          }
+
+          setFilteredRooms(categoryRooms);
         }
       } catch (error) {
         console.error("Error fetching available rooms:", error);
@@ -216,9 +222,15 @@ const ReservationForm = () => {
         setLoading(false);
       }
     };
-
     fetchAvailableRooms();
-  }, [selectedCategory, BACKEND_URL]);
+  }, [
+    selectedCategory,
+    formData.checkInDate,
+    formData.checkOutDate,
+    BACKEND_URL,
+    isEditMode,
+    assignedRoom,
+  ]);
 
   const handleCategoryChange = (e) => {
     const categoryId = e.target.value;

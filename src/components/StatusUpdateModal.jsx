@@ -1,9 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { Loader, Check, X } from "lucide-react";
 import axios from "axios";
 import { AppContext } from "../context/AppContext";
 
-const StatusUpdateModal = ({ booking, onClose, onUpdate }) => {
+const StatusUpdateModal = ({
+  booking,
+  onClose,
+  onUpdate,
+  type = "booking",
+}) => {
+  const { BACKEND_URL } = useContext(AppContext);
   const [isVisible, setIsVisible] = useState(false);
   const [status, setStatus] = useState(booking.status);
   const [loading, setLoading] = useState(false);
@@ -29,14 +35,18 @@ const StatusUpdateModal = ({ booking, onClose, onUpdate }) => {
 
     try {
       setLoading(true);
-      const response = await axios.patch(
-        `${BACKEND_URL}/api/bookings/${booking._id}/status`,
-        { status }
-      );
 
-      // Create updated booking object with new status
-      const updatedBooking = { ...booking, status };
-      onUpdate(updatedBooking);
+      // Determine API endpoint
+      const endpoint =
+        type === "reservation"
+          ? `${BACKEND_URL}/api/reservation/${booking._id}`
+          : `${BACKEND_URL}/api/bookings/update/${booking._id}`;
+
+      const response = await axios.put(endpoint, { status });
+
+      // Create updated object with new status
+      const updatedItem = { ...booking, status };
+      onUpdate(updatedItem);
 
       // Close modal after successful update
       setTimeout(() => {
@@ -51,6 +61,64 @@ const StatusUpdateModal = ({ booking, onClose, onUpdate }) => {
       setLoading(false);
     }
   };
+
+  // Get status options based on type
+  const getStatusOptions = () => {
+    if (type === "reservation") {
+      return [
+        <option key="Confirmed" value="Confirmed">
+          Confirmed
+        </option>,
+        <option key="Tentative" value="Tentative">
+          Tentative
+        </option>,
+        <option key="Waiting" value="Waiting">
+          Waiting
+        </option>,
+        <option key="Cancelled" value="Cancelled">
+          Cancelled
+        </option>,
+      ];
+    } else {
+      return [
+        <option key="Booked" value="Booked">
+          Booked
+        </option>,
+        <option key="Checked In" value="Checked In">
+          Checked In
+        </option>,
+        <option key="Checked Out" value="Checked Out">
+          Checked Out
+        </option>,
+        <option key="Cancelled" value="Cancelled">
+          Cancelled
+        </option>,
+      ];
+    }
+  };
+
+  // Get display name and room info
+  const getDisplayInfo = () => {
+    if (type === "reservation") {
+      return {
+        name: `${booking.salutation || ""} ${
+          booking.guestName || booking.name || ""
+        }`,
+        room: booking.roomAssigned?.room_number || booking.roomNo || "N/A",
+        checkIn: booking.checkInDate,
+        checkOut: booking.checkOutDate,
+      };
+    } else {
+      return {
+        name: `${booking.salutation || ""} ${booking.name || ""}`,
+        room: booking.roomNo || booking.roomNumber || "N/A",
+        checkIn: booking.checkInDate,
+        checkOut: booking.checkOutDate,
+      };
+    }
+  };
+
+  const displayInfo = getDisplayInfo();
 
   return (
     <div
@@ -84,13 +152,15 @@ const StatusUpdateModal = ({ booking, onClose, onUpdate }) => {
         )}
 
         <div className="mb-4">
-          <p className="text-sm text-dark/70 mb-1">Booking Details:</p>
+          <p className="text-sm text-dark/70 mb-1">
+            {type === "reservation" ? "Reservation" : "Booking"} Details:
+          </p>
           <p className="font-medium">
-            {booking.salutation} {booking.name} - Room {booking.roomNo}
+            {displayInfo.name} - Room {displayInfo.room}
           </p>
           <p className="text-sm text-dark/70">
-            {new Date(booking.checkInDate).toLocaleDateString()} to{" "}
-            {new Date(booking.checkOutDate).toLocaleDateString()}
+            {new Date(displayInfo.checkIn).toLocaleDateString()} to{" "}
+            {new Date(displayInfo.checkOut).toLocaleDateString()}
           </p>
         </div>
 
@@ -103,10 +173,7 @@ const StatusUpdateModal = ({ booking, onClose, onUpdate }) => {
             onChange={handleStatusChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
           >
-            <option value="Booked">Booked</option>
-            <option value="Checked In">Checked In</option>
-            <option value="Checked Out">Checked Out</option>
-            <option value="Cancelled">Cancelled</option>
+            {getStatusOptions()}
           </select>
         </div>
 
