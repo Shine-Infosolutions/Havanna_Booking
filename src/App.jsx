@@ -17,7 +17,7 @@ import AvailableRooms from "./components/AvailableRooms";
 const App = () => {
   return (
     <>
-      <div className="fixed top-0 left-0 min-w-full bg-gradient-to-b from-white to-primary/60 min-h-screen -z-10"></div>
+      <div className="fixed inset-0 bg-gradient-to-b from-white to-primary/60 -z-10"></div>
       <ToastContainer
         position="top-right"
         autoClose={3000}

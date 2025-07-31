@@ -14,12 +14,12 @@ import { AppContext } from "../context/AppContext";
 import axios from "axios";
 import ReservationForm from "../components/ReservationForm";
 import StatusUpdateModal from "../components/StatusUpdateModal";
+import { toast } from "react-toastify";
 
 const Reservations = () => {
   const { BACKEND_URL } = useContext(AppContext);
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showForm, setShowForm] = useState(false);
@@ -39,11 +39,11 @@ const Reservations = () => {
       if (response.data.success) {
         setReservations(response.data.reservations);
       } else {
-        setError("Failed to load reservations");
+        toast.error("Failed to load reservations");
       }
     } catch (error) {
       console.error("Error fetching reservations:", error);
-      setError("Failed to load reservations. Please try again later.");
+      toast.error("Failed to load reservations. Please try again later.");
     } finally {
       setLoading(false);
     }
@@ -74,7 +74,7 @@ const Reservations = () => {
       fetchReservations();
     } catch (error) {
       console.error("Error deleting reservation:", error);
-      setError("Failed to delete reservation");
+      toast.error("Failed to delete reservation");
     } finally {
       setLoading(false);
     }
@@ -148,7 +148,7 @@ const Reservations = () => {
         </button>
       </div>
 
-      {error && <div className="text-red-500 text-sm">{error}</div>}
+
 
       {/* Search and Filter */}
       <div className="flex flex-col md:flex-row md:items-center gap-4">

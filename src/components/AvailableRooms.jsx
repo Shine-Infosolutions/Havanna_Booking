@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import axios from "axios";
+import { toast } from "react-toastify";
 import ReactCalendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 
@@ -36,6 +37,7 @@ const AvailableRooms = () => {
       }
     } catch (error) {
       console.error("Error fetching rooms:", error);
+      toast.error("Failed to fetch rooms. Please try again.");
     } finally {
       setLoading(false);
     }

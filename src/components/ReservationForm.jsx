@@ -18,7 +18,6 @@ const ReservationForm = () => {
   const { BACKEND_URL, categories } = useContext(AppContext);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(false);
-  const [error, setError] = useState("");
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditMode = !!id;
@@ -153,10 +152,10 @@ const ReservationForm = () => {
               });
             }
           } else {
-            setError("Failed to load reservation data");
+            toast.error("Failed to load reservation data");
           }
         } catch (err) {
-          setError("An error occurred while loading reservation data");
+          toast.error("An error occurred while loading reservation data");
           console.error(err);
         } finally {
           setInitialLoading(false);
@@ -342,10 +341,10 @@ const ReservationForm = () => {
       if (response.data.success) {
         navigate("/reservations");
       } else {
-        setError(response.data.message || "Failed to save reservation");
+        toast.error(response.data.message || "Failed to save reservation");
       }
     } catch (err) {
-      setError("An error occurred while saving the reservation");
+      toast.error("An error occurred while saving the reservation");
       console.error(err);
     } finally {
       setLoading(false);
@@ -411,11 +410,7 @@ const ReservationForm = () => {
         </h2>
       </div>
 
-      {error && (
-        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
-          {error}
-        </div>
-      )}
+
 
       {/* Tabs */}
       <div className="flex border-b border-gray-200">

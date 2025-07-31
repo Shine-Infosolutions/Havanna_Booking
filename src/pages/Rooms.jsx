@@ -12,6 +12,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "../context/AppContext";
 import EditRoom from "../components/EditRoom";
+import { toast } from "react-toastify";
 
 const Rooms = () => {
   const navigate = useNavigate();
@@ -21,7 +22,6 @@ const Rooms = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [editingRoom, setEditingRoom] = useState(null);
   const [showEditForm, setShowEditForm] = useState(false);
 
@@ -76,7 +76,7 @@ const Rooms = () => {
       }
     } catch (error) {
       console.error("Error fetching rooms:", error);
-      setError("Failed to load rooms. Please try again later.");
+      toast.error("Failed to load rooms. Please try again later.");
     } finally {
       setLoading(false);
     }
@@ -205,7 +205,7 @@ const Rooms = () => {
         </div>
       )}
 
-      {error && <div className="text-red-500 text-sm">{error}</div>}
+
 
       {loading ? (
         <div className="flex justify-center items-center py-12">

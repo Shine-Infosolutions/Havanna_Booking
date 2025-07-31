@@ -4,6 +4,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Loader, Upload, Plus, Minus } from "lucide-react";
 import { AppContext } from "../context/AppContext";
+import { toast } from "react-toastify";
 
 const NewRoom = () => {
   const navigate = useNavigate();
@@ -22,7 +23,6 @@ const NewRoom = () => {
   });
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [photoFiles, setPhotoFiles] = useState([]);
   const [photoPreview, setPhotoPreview] = useState([]);
 
@@ -62,7 +62,6 @@ const NewRoom = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
 
     try {
       // Create form data for file upload
@@ -88,10 +87,10 @@ const NewRoom = () => {
       if (response.data.success) {
         navigate("/rooms");
       } else {
-        setError(response.data.message || "Failed to create room");
+        toast.error(response.data.message || "Failed to create room");
       }
     } catch (err) {
-      setError("An error occurred while creating the room");
+      toast.error("An error occurred while creating the room");
       console.error(err);
     } finally {
       setLoading(false);
@@ -111,12 +110,6 @@ const NewRoom = () => {
       </div>
 
       <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow p-6">
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
-            {error}
-          </div>
-        )}
-
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>

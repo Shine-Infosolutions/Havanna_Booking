@@ -29,7 +29,6 @@ const BookingForm = () => {
   const [filteredRooms, setFilteredRooms] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [loading, setLoading] = useState(false);
-  const [apiError, setApiError] = useState(null);
   const [initialLoading, setInitialLoading] = useState(isEditMode);
   const location = useLocation();
   const reservationId = location.state?.reservationId;
@@ -248,7 +247,7 @@ const BookingForm = () => {
           }
         } catch (error) {
           console.error("Error fetching reservation:", error);
-          setApiError("Failed to load reservation data");
+          toast.error("Failed to load reservation data");
         } finally {
           setInitialLoading(false);
         }
@@ -386,7 +385,7 @@ const BookingForm = () => {
           }
         } catch (error) {
           console.error("Error fetching booking:", error);
-          setApiError("Failed to load booking data");
+          toast.error("Failed to load booking data");
         } finally {
           setInitialLoading(false);
         }
@@ -455,7 +454,7 @@ const BookingForm = () => {
         }
       } catch (error) {
         console.error("Error fetching available rooms:", error);
-        setApiError("Failed to load available rooms");
+        toast.error("Failed to load available rooms");
       } finally {
         setLoading(false);
       }
@@ -794,7 +793,6 @@ const BookingForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setApiError(null);
 
     try {
       const selectedRoom = filteredRooms.find(
@@ -1010,13 +1008,14 @@ const BookingForm = () => {
       });
 
       if (response.data.success) {
+        toast.success(response.data.message);
         navigate("/bookings");
       } else {
         throw new Error(response.data.message || "Failed to save booking");
       }
     } catch (error) {
       console.error("Error saving booking:", error);
-      setApiError(error.message || "Failed to save booking. Please try again.");
+      toast.error(error.message || "Failed to save booking. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -1104,11 +1103,7 @@ const BookingForm = () => {
         <h2 className="text-2xl font-bold text-dark">{pageTitle}</h2>
       </div>
 
-      {apiError && (
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded">
-          <p>{apiError}</p>
-        </div>
-      )}
+
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Basic Booking Info */}

@@ -4,11 +4,11 @@ import { useNavigate } from "react-router-dom";
 import { AppContext } from "../context/AppContext";
 import axios from "axios";
 import RevenueCharts from "../components/RevenueCharts";
+import { toast } from "react-toastify";
 
 const Dashboard = () => {
   const { BACKEND_URL } = useContext(AppContext);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [activeCard, setActiveCard] = useState("Total Bookings");
@@ -47,7 +47,7 @@ const Dashboard = () => {
         }
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
-        setError("Failed to load dashboard data");
+        toast.error("Failed to load dashboard data");
       } finally {
         setLoading(false);
       }
@@ -281,11 +281,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {error && (
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded">
-          <p>{error}</p>
-        </div>
-      )}
+
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {stats.map((stat, index) => (

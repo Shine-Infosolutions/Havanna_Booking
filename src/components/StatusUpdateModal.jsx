@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from "react";
 import { Loader, Check, X } from "lucide-react";
 import axios from "axios";
 import { AppContext } from "../context/AppContext";
+import { toast } from "react-toastify";
 
 const StatusUpdateModal = ({
   booking,
@@ -13,7 +14,6 @@ const StatusUpdateModal = ({
   const [isVisible, setIsVisible] = useState(false);
   const [status, setStatus] = useState(booking.status);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
     setIsVisible(true);
@@ -54,7 +54,7 @@ const StatusUpdateModal = ({
       }, 500);
     } catch (error) {
       console.error("Error updating booking status:", error);
-      setError(
+      toast.error(
         error.response?.data?.message || "Failed to update booking status"
       );
     } finally {
@@ -145,11 +145,7 @@ const StatusUpdateModal = ({
           </button>
         </div>
 
-        {error && (
-          <div className="bg-red-50 border-l-4 border-red-400 p-2 mb-4 rounded text-sm">
-            {error}
-          </div>
-        )}
+
 
         <div className="mb-4">
           <p className="text-sm text-dark/70 mb-1">

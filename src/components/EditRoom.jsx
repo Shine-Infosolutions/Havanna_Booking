@@ -2,6 +2,7 @@ import React, { useState, useContext } from "react";
 import { AppContext } from "../context/AppContext";
 import { Loader, X } from "lucide-react";
 import axios from "axios";
+import { toast } from "react-toastify";
 
 // Add this component inside your Rooms component
 const EditRoom = ({ room, onClose, fetchRooms, onSave }) => {
@@ -18,7 +19,6 @@ const EditRoom = ({ room, onClose, fetchRooms, onSave }) => {
     images: room.images || [],
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -49,10 +49,10 @@ const EditRoom = ({ room, onClose, fetchRooms, onSave }) => {
         onSave(response.data.room);
         onClose();
       } else {
-        setError(response.data.message || "Failed to update room");
+        toast.error(response.data.message || "Failed to update room");
       }
     } catch (err) {
-      setError("An error occurred while updating the room");
+      toast.error("An error occurred while updating the room");
       console.error(err);
     } finally {
       setLoading(false);
@@ -72,11 +72,7 @@ const EditRoom = ({ room, onClose, fetchRooms, onSave }) => {
           </button>
         </div>
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
-            {error}
-          </div>
-        )}
+
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

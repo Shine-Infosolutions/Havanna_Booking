@@ -5,6 +5,7 @@ import { Plus, Search, Eye, Edit, Trash2, Loader, X } from "lucide-react";
 import BookingDetails from "../components/BookingDetails";
 import { useNavigate } from "react-router-dom";
 import StatusUpdateModal from "../components/StatusUpdateModal";
+import { toast } from "react-toastify";
 
 const BACKEND_URL =
   import.meta.env.BACKEND_URL || "https://havana-backend.vercel.app";
@@ -17,7 +18,6 @@ const Bookings = () => {
   const [bookingDetails, setBookingDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [detailsLoading, setDetailsLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [newStatus, setNewStatus] = useState("");
@@ -40,11 +40,11 @@ const Bookings = () => {
           setBookings(response.data);
         } else {
           console.error("Unexpected response format:", response.data);
-          setError("Received unexpected data format from server");
+          toast.error("Received unexpected data format from server");
         }
       } catch (error) {
         console.error("Error fetching bookings:", error);
-        setError("Failed to load bookings. Please try again later.");
+        toast.error("Failed to load bookings. Please try again later.");
       } finally {
         setLoading(false);
       }
@@ -96,7 +96,7 @@ const Bookings = () => {
       setDeleteBookingId(null);
     } catch (error) {
       console.error("Error deleting booking:", error);
-      setError("Failed to delete booking. Please try again.");
+      toast.error("Failed to delete booking. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -176,7 +176,7 @@ const Bookings = () => {
         </div>
       )} */}
 
-      {error && <div className="text-red-500 text-sm">{error}</div>}
+
 
       {/* Search and Filter */}
       <div className="flex flex-col md:flex-row md:items-center gap-4">

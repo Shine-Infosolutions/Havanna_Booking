@@ -4,6 +4,7 @@ import { Plus, Edit, Trash2, Loader } from "lucide-react";
 import axios from "axios";
 import { AppContext } from "../context/AppContext.jsx";
 import CategoryForm from "../components/CategoryForm";
+import { toast } from "react-toastify";
 
 // Default category images based on category name
 // const categoryImages = {
@@ -38,7 +39,6 @@ const Categories = () => {
   const { categories, categoriesLoading, BACKEND_URL, fetchCategories } =
     useContext(AppContext);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
 
@@ -71,7 +71,7 @@ const Categories = () => {
         `Error ${isEditing ? "updating" : "adding"} category:`,
         error
       );
-      setError(`Failed to ${isEditing ? "update" : "add"} category`);
+      toast.error(`Failed to ${isEditing ? "update" : "add"} category`);
     } finally {
       setLoading(false);
     }
@@ -85,7 +85,7 @@ const Categories = () => {
       fetchCategories();
     } catch (error) {
       console.error("Error deleting category:", error);
-      setError("Failed to delete category");
+      toast.error("Failed to delete category");
     } finally {
       setLoading(false);
     }

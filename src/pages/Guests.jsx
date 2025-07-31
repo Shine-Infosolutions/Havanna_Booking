@@ -11,12 +11,12 @@ import {
 } from "lucide-react";
 import { AppContext } from "../context/AppContext";
 import axios from "axios";
+import { toast } from "react-toastify";
 
 const Guests = () => {
   const { BACKEND_URL } = useContext(AppContext);
   const [guests, setGuests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
@@ -46,11 +46,11 @@ const Guests = () => {
         setTotal(response.data.total);
         setTotalPages(response.data.pages);
       } else {
-        setError("Failed to load guests");
+        toast.error("Failed to load guests");
       }
     } catch (error) {
       console.error("Error fetching guests:", error);
-      setError("Failed to load guests. Please try again later.");
+      toast.error("Failed to load guests. Please try again later.");
     } finally {
       setLoading(false);
     }
@@ -70,7 +70,7 @@ const Guests = () => {
         </h2>
       </div>
 
-      {error && <div className="text-red-500 text-sm">{error}</div>}
+
 
       {/* Search */}
       <div className="relative">
