@@ -75,8 +75,8 @@ const BookingForm = () => {
     identityDetails: {
       idType: "",
       idNumber: "",
-      idPhotoFrontFile: null,
-      idPhotoBackFile: null,
+      idPhotoFront: "",
+      idPhotoBack: "",
     },
 
     // Booking Info
@@ -319,6 +319,8 @@ const BookingForm = () => {
                 idPhotoFront: booking.identityDetails?.idPhotoFront || "",
                 idPhotoBack: booking.identityDetails?.idPhotoBack || "",
               },
+              idProofImageUrl: booking.identityDetails?.idPhotoFront || "",
+              idProofImageUrl2: booking.identityDetails?.idPhotoBack || "",
 
               bookingInfo: {
                 checkIn: formatDate(booking.bookingInfo?.checkIn),
@@ -475,8 +477,17 @@ const BookingForm = () => {
   ]);
 
   const capturePhoto = () => {
+    if (!webcamRef.current) {
+      console.error("Webcam ref is not available");
+      return;
+    }
+
     const imageSrc = webcamRef.current.getScreenshot();
 
+    if (!imageSrc) {
+      console.error("Failed to capture screenshot");
+      return;
+    }
     // Convert base64 to blob
     fetch(imageSrc)
       .then((res) => res.blob())
@@ -488,27 +499,48 @@ const BookingForm = () => {
         );
 
         if (currentCameraTarget === "front") {
-          setFormData({
-            ...formData,
+          setFormData((prev) => ({
+            ...prev,
+            identityDetails: {
+              ...prev.identityDetails,
+              idPhotoFront: file,
+            },
             idProofImageUrl: imageSrc,
-            idProofImageFile: file,
-          });
+          }));
         } else {
-          setFormData({
-            ...formData,
+          setFormData((prev) => ({
+            ...prev,
+            identityDetails: {
+              ...prev.identityDetails,
+              idPhotoBack: file,
+            },
             idProofImageUrl2: imageSrc,
-            idProofImageFile2: file,
-          });
+          }));
         }
 
         setShowCamera(false);
+      })
+      .catch((error) => {
+        console.error("Error processing captured image:", error);
       });
   };
 
   // Add these functions to handle camera toggling
-  const openCamera = (target) => {
-    setCurrentCameraTarget(target);
-    setShowCamera(true);
+  const openCamera = async (target) => {
+    try {
+      // Request camera permission first
+      await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+      });
+
+      setCurrentCameraTarget(target);
+      setShowCamera(true);
+    } catch (error) {
+      console.error("Camera permission denied or not available:", error);
+      alert(
+        "Camera access is required to take photos. Please allow camera permission and try again."
+      );
+    }
   };
 
   const handleInputChange = (e) => {
@@ -626,11 +658,14 @@ const BookingForm = () => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const imageUrl = URL.createObjectURL(file);
-      setFormData({
-        ...formData,
+      setFormData((prev) => ({
+        ...prev,
+        identityDetails: {
+          ...prev.identityDetails,
+          idPhotoFront: file,
+        },
         idProofImageUrl: imageUrl,
-        idProofImageFile: file,
-      });
+      }));
     }
   };
 
@@ -638,29 +673,42 @@ const BookingForm = () => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const imageUrl = URL.createObjectURL(file);
-      setFormData({
-        ...formData,
+      setFormData((prev) => ({
+        ...prev,
+        identityDetails: {
+          ...prev.identityDetails,
+          idPhotoBack: file,
+        },
         idProofImageUrl2: imageUrl,
-        idProofImageFile2: file, // Store the file for later upload
-      });
+      }));
     }
   };
 
   const removeIdProofImage = (imageNum) => {
     if (imageNum === 1) {
-      URL.revokeObjectURL(formData.idProofImageUrl); // Clean up the URL
-      setFormData({
-        ...formData,
+      if (formData.idProofImageUrl) {
+        URL.revokeObjectURL(formData.idProofImageUrl);
+      }
+      setFormData((prev) => ({
+        ...prev,
+        identityDetails: {
+          ...prev.identityDetails,
+          idPhotoFront: "",
+        },
         idProofImageUrl: "",
-        idProofImageFile: null,
-      });
+      }));
     } else {
-      URL.revokeObjectURL(formData.idProofImageUrl2); // Clean up the URL
-      setFormData({
-        ...formData,
+      if (formData.idProofImageUrl2) {
+        URL.revokeObjectURL(formData.idProofImageUrl2);
+      }
+      setFormData((prev) => ({
+        ...prev,
+        identityDetails: {
+          ...prev.identityDetails,
+          idPhotoBack: "",
+        },
         idProofImageUrl2: "",
-        idProofImageFile2: null,
-      });
+      }));
     }
   };
 
@@ -758,10 +806,35 @@ const BookingForm = () => {
         return;
       }
 
+      // Convert files to base64 strings
+      const convertToBase64 = (file) => {
+        return new Promise((resolve) => {
+          if (!file || typeof file === "string") {
+            resolve(file || "");
+            return;
+          }
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.readAsDataURL(file);
+        });
+      };
+
+      const idPhotoFront = await convertToBase64(
+        formData.identityDetails?.idPhotoFront
+      );
+      const idPhotoBack = await convertToBase64(
+        formData.identityDetails?.idPhotoBack
+      );
+
       const submissionData = {
         ...formData,
         categoryId: selectedRoom?.category?._id || formData.categoryId,
         roomRate: selectedRoom?.price || formData.roomRate,
+        identityDetails: {
+          ...formData.identityDetails,
+          idPhotoFront,
+          idPhotoBack,
+        },
         bookingInfo: {
           ...formData.bookingInfo,
           checkIn: new Date(formData.bookingInfo.checkIn),
@@ -1791,10 +1864,18 @@ const BookingForm = () => {
               <div className="relative rounded-lg overflow-hidden">
                 <Webcam
                   audio={false}
+                  mirrored={true}
                   ref={webcamRef}
                   screenshotFormat="image/jpeg"
                   videoConstraints={{
                     facingMode: "environment",
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                  }}
+                  onUserMediaError={(error) => {
+                    console.error("Webcam error:", error);
+                    alert("Failed to access camera. Please check permissions.");
+                    setShowCamera(false);
                   }}
                   className="w-full"
                 />
